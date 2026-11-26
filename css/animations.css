@@ -1,0 +1,80 @@
+/* ==========================================================================
+   animations.css — повторювані CSS-анімації.
+   Анімуються лише transform та opacity (дешево для мобільного GPU).
+   Складні послідовності (інтро, MATCH FOUND, нагороди) — js/animations.js, Phase 04.
+   ========================================================================== */
+
+/* Кнопка в очікуванні: м'яка «дихаюча» пульсація сходинками */
+.arcade-btn.is-pulse { animation: btn-pulse 1.4s steps(6) infinite; }
+.arcade-btn.is-pulse:active,
+.arcade-btn.is-pulse.is-pressed { animation: none; }
+
+@keyframes btn-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+/* Активна картка «підстрибує», коли торкнулися заблокованої */
+.card.is-nudged { animation: card-nudge 420ms steps(6); }
+
+@keyframes card-nudge {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+/* Індикатор трекера: білий спалах → заповнення → пульсація (повна версія — Phase 04) */
+.indicator.is-filling { animation: indicator-fill 480ms steps(6); }
+
+@keyframes indicator-fill {
+  0% { transform: scale(1); filter: brightness(3); }
+  40% { transform: scale(1.25); filter: brightness(1.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* MATCH FOUND: три переможні картки пульсують синхронно (клас додається в один кадр) */
+.card.is-winner { animation: winner-pulse 600ms steps(4) infinite; }
+
+@keyframes winner-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.match-banner.is-visible { animation: banner-pop 360ms steps(5); }
+
+@keyframes banner-pop {
+  0% { opacity: 0; transform: translate(-50%, var(--banner-y)) scale(0.4); }
+  70% { opacity: 1; transform: translate(-50%, var(--banner-y)) scale(1.12); }
+  100% { opacity: 1; transform: translate(-50%, var(--banner-y)) scale(1); }
+}
+
+/* Картка з'являється, коли під її рядом проходить лінія сітки */
+.card.is-built { animation: card-pop 260ms steps(4); }
+
+@keyframes card-pop {
+  0% { transform: scale(0.6); filter: brightness(2.5); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Відкрита картка: відсоток коротко «вистрибує» */
+.card.is-revealed .card__reward { animation: reward-pop 320ms steps(4); }
+
+@keyframes reward-pop {
+  0% { transform: scale(1.35); filter: brightness(2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Персонаж після появи ледь помітно «дихає» (не для розбитого серця) */
+.reward__stage.is-idle { animation: meme-idle 2.4s steps(4) infinite; }
+
+@keyframes meme-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Прихованим сценам анімації не потрібні — ставимо їх на паузу */
+.scene:not(.is-active),
+.scene:not(.is-active) * { animation-play-state: paused !important; }

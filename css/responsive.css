@@ -1,0 +1,70 @@
+/* ==========================================================================
+   responsive.css — viewport, малі/великі екрани, орієнтація, reduced motion
+   ========================================================================== */
+
+/* Dynamic viewport height: враховує панелі браузера, що з'являються й ховаються */
+@supports (height: 100dvh) {
+  :root { --app-h: 100dvh; }
+}
+
+/* Fallback для браузерів без container queries (iOS < 16):
+   рахуємо розмір картки від висоти екрана з запасом на шапку й трекер */
+@supports not (width: 1cqw) {
+  .board {
+    --card: min(calc((min(100vw, 430px) - 2 * var(--pad) - 2 * var(--gap)) / 3),
+                calc((var(--app-h) - 230px) / 4),
+                132px);
+  }
+}
+
+/* Невисокі екрани (iPhone SE з панелями Safari): компактніші відступи */
+@media (max-height: 620px) {
+  :root { --gap: 6px; --btn-bottom: 16px; }
+  .scene--game { gap: 5px; }
+  .hint--game { font-size: 15px; }
+  .start__top { gap: 10px; }
+  .scene--reward { gap: 6px; }
+}
+
+/* Дуже вузькі екрани (320px) */
+@media (max-width: 340px) {
+  :root { --pad: 10px; }
+  .tracker { gap: 4px 8px; }
+}
+
+/* Великі екрани: центрована ігрова область з неоновою межею */
+@media (min-width: 600px) {
+  body { display: grid; place-items: center; }
+  .app {
+    height: min(var(--app-h), 900px);
+    box-shadow: 0 0 0 2px var(--c-dark-purple), 0 0 0 4px var(--c-bg), 0 0 0 6px var(--c-metal-purple);
+  }
+}
+
+/* Телефон у горизонтальному положенні: гра розрахована на Portrait */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app > * { visibility: hidden !important; }
+  .app::after {
+    content: 'Поверни телефон вертикально';
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    font-family: var(--font-pixel);
+    font-size: 20px;
+    text-align: center;
+    color: var(--c-bright-pink);
+  }
+}
+
+/* Менше руху для тих, хто це обрав у системі */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

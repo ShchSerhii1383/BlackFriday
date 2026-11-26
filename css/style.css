@@ -1,0 +1,708 @@
+/* ==========================================================================
+   style.css — палітра, шрифти, базовий layout і компоненти
+   Neon Pixel Arcade: жорсткі піксельні тіні, ступінчасті кути, мінімум розмиття.
+   ========================================================================== */
+
+/* ---------- Шрифти (локальні WOFF2, розбиті за діапазонами символів) ---------- */
+
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('../assets/fonts/press-start-2p-latin-400-normal.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('../assets/fonts/press-start-2p-cyrillic-400-normal.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('../assets/fonts/pixelify-sans-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  /* Кириличний файл доповнено великою «І» (U+0406) — див. tools/build-assets.py */
+  font-family: 'Pixelify Sans';
+  src: url('../assets/fonts/pixelify-sans-cyrillic-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('../assets/fonts/pixelify-sans-latin-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('../assets/fonts/pixelify-sans-cyrillic-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* ---------- Палітра ---------- */
+
+:root {
+  --c-bg: #080609;
+  --c-dark-purple: #340D40;
+  --c-deep-purple: #210C2C;
+  --c-metal-purple: #780C96;
+  --c-magenta: #D000ED;
+  --c-neon-pink: #FF79F4;
+  --c-bright-pink: #FFB5FF;
+  --c-text: #E8DFEA;
+
+  --c-r0: #FF3B50;   --c-r0-dark: #590C24;  --c-r0-light: #FFB0B8;
+  --c-r33: #38D7FF;  --c-r33-dark: #125577; --c-r33-light: #B5F5FF;
+  --c-r66: #B64BFF;  --c-r66-dark: #58158B; --c-r66-light: #E6B8FF;
+  --c-r100: #FFBF32; --c-r100-dark: #91500C; --c-r100-light: #FFF1A3;
+
+  /* Колір поточної нагороди — підставляє ui.js на екрані Reward */
+  --reward: var(--c-neon-pink);
+  --reward-dark: var(--c-dark-purple);
+  --reward-light: var(--c-bright-pink);
+
+  --font-arcade: 'Press Start 2P', 'Courier New', monospace;
+  --font-pixel: 'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif;
+
+  /* Висота застосунку: fallback 100vh, далі dynamic viewport (див. responsive.css) */
+  --app-h: 100vh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --pad: 14px;
+  /* Відступ головної кнопки від низу — однаковий на Start і Reward,
+     щоб палець знаходив кнопку в тому самому місці */
+  --btn-bottom: clamp(24px, 9dvh, 80px);
+  --gap: 8px;
+  --px: 2px; /* «художній піксель» для тіней і рамок */
+}
+
+/* ---------- База ---------- */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--c-bg);
+  color: var(--c-text);
+  overflow: hidden;            /* гра займає рівно один екран — без скролу */
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-pixel);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; }
+
+.app {
+  position: relative;
+  width: 100%;
+  max-width: 430px;            /* на великих екранах — центрована «мобільна» область */
+  height: var(--app-h);
+  margin: 0 auto;
+  overflow: hidden;
+  isolation: isolate;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ---------- Сцени ---------- */
+
+.scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding:
+    calc(var(--safe-top) + 12px)
+    calc(var(--safe-right) + var(--pad))
+    calc(var(--safe-bottom) + 14px)
+    calc(var(--safe-left) + var(--pad));
+  visibility: hidden;
+  opacity: 0;
+}
+.scene.is-active { visibility: visible; opacity: 1; }
+
+/* ---------- Типографіка ---------- */
+
+/* Металевий піксельний заголовок: ступінчасті смуги кольору + жорстка тінь */
+.title-pixel {
+  margin: 0;
+  font-family: var(--font-arcade);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--c-bright-pink);
+  background: linear-gradient(180deg,
+      #FFFFFF 0 30%,
+      var(--c-bright-pink) 30% 55%,
+      var(--c-neon-pink) 55% 78%,
+      var(--c-magenta) 78% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* text-shadow ламається з background-clip у Safari — тінь робимо фільтром */
+  filter: drop-shadow(0 var(--px) 0 var(--c-dark-purple)) drop-shadow(0 calc(var(--px) * 2) 0 var(--c-bg));
+}
+
+.hint {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--c-text);
+}
+
+/* ---------- Логотип ---------- */
+
+.logo {
+  width: min(82%, 330px);
+  height: auto;
+}
+.logo--compact {
+  width: auto;
+  height: clamp(30px, 6.2dvh, 52px);
+}
+
+/* ---------- START SCREEN ---------- */
+
+.scene--start { justify-content: space-between; }
+
+.start__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: clamp(28px, 9dvh, 90px);
+}
+.start__title { font-size: 15px; }
+
+.start__bottom {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  /* кнопка — у нижній третині, під великим пальцем */
+  margin-bottom: var(--btn-bottom);
+}
+
+/* ---------- Аркадна кнопка ---------- */
+
+.arcade-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(80vw, 300px);
+  aspect-ratio: 960 / 248;
+  padding: 0 0 2%;
+  border: 0;
+  background: url('../assets/ui/arcade-button.webp') center / 100% 100% no-repeat;
+  cursor: pointer;
+  touch-action: manipulation;  /* без затримки й подвійного зуму */
+  transition: transform 70ms steps(2), filter 70ms steps(2);
+}
+.arcade-btn__label {
+  font-family: var(--font-arcade);
+  font-size: clamp(11px, 3.4vw, 13px);
+  letter-spacing: 0.05em;
+  color: var(--c-bright-pink);
+  text-shadow: 0 var(--px) 0 var(--c-magenta), 0 calc(var(--px) * 2) 0 var(--c-bg);
+  white-space: nowrap;
+}
+/* Pressed: кнопка «провалюється» на 2 художні пікселі */
+.arcade-btn:active,
+.arcade-btn.is-pressed {
+  transform: translateY(calc(var(--px) * 2)) scale(0.985);
+  filter: brightness(0.82);
+}
+.arcade-btn:disabled {
+  cursor: default;
+  filter: grayscale(0.8) brightness(0.55);
+  animation: none;
+}
+.arcade-btn:focus-visible { outline: 2px dashed var(--c-bright-pink); outline-offset: 4px; }
+
+/* ---------- Кнопка звуку ---------- */
+
+.sound-btn {
+  position: absolute;
+  z-index: 20;
+  top: calc(var(--safe-top) + 6px);
+  right: calc(var(--safe-right) + 6px);
+  width: 48px;
+  height: 48px;               /* зона дотику більша за іконку */
+  padding: 10px 6px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  visibility: hidden;
+}
+.app[data-state='start'] .sound-btn,
+.app[data-state='game'] .sound-btn,
+.app[data-state='reward'] .sound-btn { visibility: visible; }
+.sound-btn img { width: 100%; height: 100%; object-fit: contain; }
+.sound-btn:active img { transform: translateY(var(--px)); }
+
+/* ---------- DISCOUNT HUNT ---------- */
+
+.scene--game {
+  gap: 8px;
+  padding-top: calc(var(--safe-top) + 8px);
+}
+
+.game__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.game__title { font-size: 12px; }
+.hint--game { font-size: 16px; color: var(--c-bright-pink); }
+
+/* Поле займає весь вільний простір; розмір карток рахується від нього (container query) */
+.board-area {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+
+.board {
+  --card: min(calc((100cqw - 2 * var(--gap)) / 3), calc((100cqh - 3 * var(--gap)) / 4), 132px);
+  display: grid;
+  grid-template-columns: repeat(3, var(--card));
+  grid-auto-rows: var(--card);
+  gap: var(--gap);
+  touch-action: none;          /* жести сторінки не заважають стиранню */
+}
+
+/* ---------- Картка (шари знизу вгору: фон → reward → canvas → рамка) ---------- */
+
+.card {
+  position: relative;
+  width: var(--card);
+  height: var(--card);
+  transition: filter 200ms steps(4);
+}
+
+.card__bg,
+.card__reward-box {
+  position: absolute;
+  /* отвір рамки: див. CONFIG.frameHole */
+  inset: 10.9% 11.1% 10.4% 11.1%;
+}
+.card__bg {
+  background:
+    radial-gradient(circle at 50% 45%, var(--c-dark-purple) 0 35%, var(--c-deep-purple) 70%, var(--c-bg) 100%);
+}
+.card__reward-box {
+  display: grid;
+  place-items: center;
+}
+/* Однакова висота цифр для всіх відсотків; широкий «100%» обмежується шириною */
+.card__reward {
+  height: 42%;
+  width: auto;
+  max-width: 90%;
+  object-fit: contain;
+}
+.card__scratch {
+  position: absolute;
+  inset: 7%;                   /* CONFIG.scratch.coverInset: заходить під рамку */
+  width: 86%;
+  height: 86%;
+  touch-action: none;
+  transition: opacity var(--cover-fade, 350ms) steps(5);
+}
+.card__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;        /* дотики проходять крізь рамку до canvas */
+}
+
+.card.is-revealed .card__scratch { opacity: 0; pointer-events: none; }
+/* Поки стирається інша картка — решта приглушена */
+.card.is-locked { filter: brightness(0.5) saturate(0.6); }
+.card.is-active::before {
+  content: '';
+  position: absolute;
+  inset: 2%;
+  background: radial-gradient(circle, rgba(255, 121, 244, 0.35), transparent 70%);
+  pointer-events: none;
+}
+
+/* ---------- DISCOUNT TRACKER ---------- */
+
+.tracker {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: center;
+  gap: 4px clamp(10px, 4vw, 20px);
+  padding: 8px 10px 6px;
+  background: var(--c-deep-purple);
+  /* ступінчасті кути панелі */
+  clip-path: polygon(0 6px, 6px 6px, 6px 0, calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
+      100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
+      6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px));
+}
+.tracker__group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.tracker__label {
+  font-family: var(--font-arcade);
+  font-size: 9px;
+  color: var(--group-color);
+  text-shadow: 0 var(--px) 0 var(--c-bg);
+}
+.tracker__row { display: flex; gap: 2px; }
+.indicator {
+  width: clamp(18px, 5.6vw, 22px);
+  height: clamp(18px, 5.6vw, 22px);
+  object-fit: contain;
+}
+
+/* ---------- Системні повідомлення і тост ---------- */
+
+.system-msg {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 92px);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 16px;
+  white-space: nowrap;
+  color: var(--c-bright-pink);
+  background: var(--c-bg);
+  border: var(--px) solid var(--c-metal-purple);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms steps(3);
+}
+.system-msg.is-visible { opacity: 1; }
+
+.toast {
+  position: absolute;
+  z-index: 30;
+  top: calc(var(--safe-top) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  font-family: var(--font-arcade);
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--c-bright-pink);
+  background: var(--c-bg);
+  border: var(--px) solid var(--c-magenta);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms steps(3);
+}
+.toast.is-visible { opacity: 1; }
+
+/* ---------- REWARD SCREEN ---------- */
+
+.scene--reward {
+  gap: clamp(8px, 2dvh, 16px);
+}
+/* Вміст центрується у вільному просторі, а кнопка закріплена внизу */
+.scene--reward .reward__title { margin-top: auto; }
+.scene--reward .reward__confirm { margin-top: auto; }
+.scene--reward #reward-btn { margin-bottom: var(--btn-bottom); }
+.reward__glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse 70% 45% at 50% 48%, var(--reward-dark), transparent 75%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.reward__title {
+  font-size: clamp(14px, 4.4vw, 18px);
+  background: linear-gradient(180deg,
+      #FFFFFF 0 28%,
+      var(--reward-light) 28% 55%,
+      var(--reward) 55% 80%,
+      var(--reward-dark) 80% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.reward__discount {
+  height: clamp(58px, 12.5dvh, 120px);
+  width: auto;
+  max-width: 80%;
+  object-fit: contain;
+}
+.reward__stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.reward__meme {
+  /* базова висота × CONFIG memeScale (вирівнювання персонажів «на око») */
+  height: calc(clamp(130px, 30dvh, 270px) * var(--meme-scale, 1));
+  width: auto;
+  max-width: 86vw;
+  object-fit: contain;
+}
+/* Розбите серце: замість цілого зображення — дві половинки, складені точно по лінії розлому */
+.reward__meme-half {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.reward__stage.has-split .reward__meme { visibility: hidden; }
+.reward__stage.has-split .reward__meme-half { display: block; }
+/* Піксельна платформа під єдинорогом: ховає обрізаний нижній край асета */
+.reward__platform {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 92%;
+  height: 16px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg,
+      var(--reward-light) 0 3px,
+      var(--reward) 3px 9px,
+      var(--reward-dark) 9px 13px,
+      #3a1d05 13px 16px);
+  clip-path: polygon(0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+      100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%,
+      4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px));
+}
+.reward__stage.has-platform .reward__platform { display: block; }
+.reward__stage.has-platform { margin-bottom: 6px; }
+
+.reward__text {
+  max-width: 330px;
+  margin: 0;
+  font-size: clamp(21px, 6.2vw, 25px);
+  line-height: 1.22;
+  text-align: center;
+  text-wrap: balance;          /* рівні рядки без «висячих» слів */
+  color: var(--c-text);
+  text-shadow: 0 var(--px) 0 var(--reward-dark);
+}
+
+/* ---------- Ефектні шари ---------- */
+
+.fx-layer,
+.line-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Делікатний CRT: статичні сканлайни + віньєтка, без мерехтіння */
+.crt {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.noscript { padding: 24px; text-align: center; }
+
+/* ---------- MATCH FOUND ---------- */
+
+.board-area { position: relative; }
+
+/* Переможні картки: рамка кольору нагороди (--win задає game.js) */
+.card.is-winner::after {
+  content: '';
+  position: absolute;
+  inset: 4%;
+  border: calc(var(--px) * 2) solid var(--win);
+  box-shadow: 0 0 0 var(--px) var(--c-bg), 0 0 12px var(--win);
+  pointer-events: none;
+}
+/* Решта поля приглушена */
+.card.is-dimmed { filter: brightness(0.32) saturate(0.4); }
+
+.match-banner {
+  position: absolute;
+  /* Над полем, поверх підказки в шапці — щоб не закривати переможні картки */
+  --banner-y: calc(-100% + 4px);
+  left: 50%;
+  top: 0;
+  z-index: 5;
+  padding: 10px 14px;
+  font-family: var(--font-arcade);
+  font-size: clamp(14px, 4.6vw, 18px);
+  white-space: nowrap;
+  color: var(--win, var(--c-neon-pink));
+  text-shadow: 0 var(--px) 0 var(--c-bg), 0 0 8px var(--win, var(--c-neon-pink));
+  background: var(--c-bg);
+  border: calc(var(--px) * 2) solid var(--win, var(--c-neon-pink));
+  box-shadow: 0 0 0 var(--px) var(--c-bg), 0 0 16px var(--win, var(--c-neon-pink));
+  transform: translate(-50%, var(--banner-y)) scale(0.6);
+  opacity: 0;
+  pointer-events: none;
+}
+.match-banner.is-visible { opacity: 1; transform: translate(-50%, var(--banner-y)) scale(1); }
+
+/* Підтвердження після CLAIM / ACCEPT — місце зарезервоване, щоб нічого не стрибало */
+.reward__confirm {
+  min-height: 14px;
+  margin: 0;
+  font-family: var(--font-arcade);
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.05em;
+  color: var(--reward-light);
+  opacity: 0;
+  transition: opacity 200ms steps(4);
+}
+.reward__confirm.is-visible { opacity: 1; }
+
+/* Під час MATCH FOUND напис займає місце заголовка й підказки — ховаємо їх, щоб не визирали */
+.app[data-game-state='MATCH_FOUND'] .game__title,
+.app[data-game-state='MATCH_FOUND'] .hint--game { visibility: hidden; }
+
+/* ==========================================================================
+   Phase 04 — шари анімацій
+   ========================================================================== */
+
+/* Неонова рамка «корпусу». Інтро обводить саме цей прямокутник. */
+.app-frame {
+  position: absolute;
+  z-index: 9;
+  top: calc(var(--safe-top) + 4px);
+  right: calc(var(--safe-right) + 4px);
+  bottom: calc(var(--safe-bottom) + 4px);
+  left: calc(var(--safe-left) + 4px);
+  border: var(--px) solid var(--c-neon-pink);
+  box-shadow: 0 0 6px rgba(208, 0, 237, 0.45), inset 0 0 6px rgba(208, 0, 237, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  /* зрізані «піксельні» кути */
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px),
+      calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+}
+.app.has-frame .app-frame { opacity: 0.55; }
+
+/* Голова неонової лінії */
+.line-head { fill: #FFFFFF; filter: drop-shadow(0 0 3px #FF79F4); }
+.fx-layer { z-index: 11; }
+
+/* Інтро: елемент прихований, доки лінія його не «відкриє» */
+.intro-hidden { clip-path: inset(0 100% 0 0); }
+.sound-btn.intro-hidden { clip-path: none; opacity: 0; pointer-events: none; }
+
+/* Сітка будується: картки з'являються ряд за рядом, дотики вимкнено */
+.board.is-building { pointer-events: none; }
+.board.is-building .card:not(.is-built) { visibility: hidden; }
+
+.match-banner { z-index: 12; }
+
+/* Перехід між сценами */
+.wipe {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: none;
+  flex-direction: column;
+}
+.wipe.is-active { display: flex; }
+.wipe i {
+  flex: 1;
+  margin-bottom: -1px;        /* без щілин між смугами */
+  background: var(--wipe-color, var(--c-deep-purple));
+  border-bottom: var(--px) solid rgba(255, 121, 244, 0.35);
+  transform: scaleX(0);
+}
+
+/* ---------- Фінальні сценарії (animations.js → playReward) ---------- */
+
+/* Поки сценарій не дійшов до елемента, він схований */
+.scene--reward.is-staged :is(#reward-title, #reward-discount, .reward__stage, #reward-text, #reward-btn):not(.is-on) {
+  opacity: 0;
+}
+
+.reward__flash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--reward);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Енергетична хвиля: квадратне «піксельне» кільце, що розширюється від центру */
+.reward__wave {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 45%;
+  width: 60%;
+  aspect-ratio: 1;
+  border: calc(var(--px) * 3) solid var(--reward-light);
+  box-shadow: 0 0 0 var(--px) var(--reward), 0 0 18px var(--reward);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Відблиск: світла смуга, обрізана маскою по силуету персонажа */
+.reward__shine {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 44%, rgba(255, 255, 255, 0.85) 48%, rgba(255, 255, 255, 0.85) 52%, transparent 56%) 85% 0 / 300% 100% no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  opacity: 0;
+}
+.reward__stage.has-shine .reward__shine { display: block; }
+
+/* Легендарна нагорода: рамка «корпусу» стає золотою */
+.app.is-legendary .app-frame {
+  border-color: var(--c-r100);
+  box-shadow: 0 0 8px rgba(255, 191, 50, 0.6), inset 0 0 8px rgba(255, 191, 50, 0.35);
+  opacity: 0.85;
+}
