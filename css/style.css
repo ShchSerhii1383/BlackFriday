@@ -321,15 +321,22 @@ button { font: inherit; color: inherit; }
   background:
     radial-gradient(circle at 50% 45%, var(--c-dark-purple) 0 35%, var(--c-deep-purple) 70%, var(--c-bg) 100%);
 }
-.card__reward-box {
-  display: grid;
-  place-items: center;
-}
-/* Однакова висота цифр для всіх відсотків; широкий «100%» обмежується шириною */
+/* Відсоток не може вийти за отвір рамки за жодних обставин */
+.card__reward-box { overflow: hidden; }
+
+/*
+ * Однакова висота цифр для всіх відсотків; широкий «100%» обмежується шириною.
+ * Абсолютне позиціювання з явними width/height + object-fit: contain —
+ * схема, яку Safari, Chrome і Firefox рахують однаково (на відміну від
+ * відсоткової висоти картинки всередині CSS grid, яку WebKit рахує інакше).
+ */
 .card__reward {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 90%;
   height: 42%;
-  width: auto;
-  max-width: 90%;
+  max-width: none;
   object-fit: contain;
 }
 .card__scratch {
