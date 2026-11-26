@@ -197,7 +197,22 @@ button { font: inherit; color: inherit; }
   align-items: center;
   gap: 14px;
   width: 100%;
-  margin-top: clamp(28px, 9dvh, 90px);
+  /* Логотип і написи — по центру вільного простору над кнопкою, без порожнечі */
+  margin: auto 0;
+  padding-bottom: 4dvh;
+}
+.scene--start .logo-wrap { position: relative; width: min(88%, 360px); }
+.scene--start .logo { width: 100%; }
+
+/* Блиск логотипа: смуга світла проходить по силуету BLACK FRIDAY (маска — сам асет) */
+.logo-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 43%, rgba(255, 255, 255, 0.9) 48%, rgba(255, 245, 255, 0.9) 52%, transparent 57%) 85% 0 / 300% 100% no-repeat;
+  -webkit-mask: url('../assets/ui/black-friday-logo.webp') center / 100% 100% no-repeat;
+  mask: url('../assets/ui/black-friday-logo.webp') center / 100% 100% no-repeat;
+  opacity: 0;
 }
 .start__title { font-size: 15px; }
 
@@ -232,8 +247,8 @@ button { font: inherit; color: inherit; }
   text-shadow: 0 var(--px) 0 var(--c-magenta), 0 calc(var(--px) * 2) 0 var(--c-bg);
   white-space: nowrap;
 }
-/* Pressed: кнопка «провалюється» на 2 художні пікселі */
-.arcade-btn:active,
+/* Pressed: кнопка «провалюється» на 2 художні пікселі.
+   .is-pressed ставить ui.js → bindArcadeButtons (працює й на iPhone). */
 .arcade-btn.is-pressed {
   transform: translateY(calc(var(--px) * 2)) scale(0.985);
   filter: brightness(0.82);
@@ -266,6 +281,8 @@ button { font: inherit; color: inherit; }
 .app[data-state='reward'] .sound-btn { visibility: visible; }
 .sound-btn img { width: 100%; height: 100%; object-fit: contain; }
 .sound-btn:active img { transform: translateY(var(--px)); }
+/* Декоративні картинки не перетягуються і не відкривають меню «Зберегти зображення» */
+.app img { -webkit-user-drag: none; user-drag: none; }
 
 /* ---------- DISCOUNT HUNT ---------- */
 
@@ -345,7 +362,6 @@ button { font: inherit; color: inherit; }
   width: 86%;
   height: 86%;
   touch-action: none;
-  transition: opacity var(--cover-fade, 350ms) steps(5);
 }
 .card__frame {
   position: absolute;
@@ -355,7 +371,7 @@ button { font: inherit; color: inherit; }
   pointer-events: none;        /* дотики проходять крізь рамку до canvas */
 }
 
-.card.is-revealed .card__scratch { opacity: 0; pointer-events: none; }
+.card.is-revealed .card__scratch { pointer-events: none; }
 /* Поки стирається інша картка — решта приглушена */
 .card.is-locked { filter: brightness(0.5) saturate(0.6); }
 .card.is-active::before {

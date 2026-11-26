@@ -39,6 +39,12 @@ tools/test-round.mjs    перевірка чесності логіки: node t
 `_source/` починається з підкреслення, тому GitHub Pages (Jekyll) його не публікує.
 **Не додавайте `.nojekyll`**, інакше 20 МБ оригіналів потраплять на сайт.
 
+## Оновлення на GitHub Pages
+
+GitHub Pages і Safari кешують CSS/JS (до ~10 хв). Після заміни файлів змініть мітку
+`?v=…` у `index.html` (у трьох `<link>` і в `<script>`), інакше телефон може
+показувати стару версію.
+
 ## Асети
 
 Після зміни будь-якого оригіналу в `_source/`:
@@ -58,5 +64,5 @@ python3 tools/build-assets.py
 - [x] Phase 02 — Core Game
 - [x] Phase 03 — Reward System
 - [x] Phase 04 — Animation
-- [ ] Phase 05 — Polish
+- [x] Phase 05 — Polish
 - [ ] Phase 06 — Testing & Deployment

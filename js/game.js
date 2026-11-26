@@ -106,6 +106,7 @@ export class Game {
   }
 
   async _enterIntro(scope) {
+    $('#start-logo').classList.remove('is-shining');
     showScene('start');
     $('#start-btn').disabled = true;
     await playIntro(scope, {
@@ -123,6 +124,7 @@ export class Game {
 
   _enterStart() {
     this.app.classList.add('has-frame');
+    $('#start-logo').classList.add('is-shining'); // блиск на логотипі, поки чекаємо гравця
     $('#start-btn').disabled = false;
     showScene('start');
   }

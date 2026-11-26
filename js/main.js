@@ -6,7 +6,7 @@ import { CONFIG, REWARDS } from './config.js';
 import { AudioManager } from './audio.js';
 import { Game, State } from './game.js';
 import { Particles } from './particles.js';
-import { loadImage, tintImage, applyTexts, toast } from './ui.js';
+import { loadImage, tintImage, applyTexts, toast, bindArcadeButtons } from './ui.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -48,12 +48,12 @@ function bindSoundButton() {
 async function boot() {
   AudioManager.init();
   applyTexts();
-  document.documentElement.style.setProperty('--cover-fade', `${CONFIG.timing.coverFadeOut}ms`);
 
   const deps = await preload();
   const particles = new Particles($('#fx-layer'), $('#app'));
   const game = new Game({ ...deps, particles });
   bindSoundButton();
+  bindArcadeButtons();
   game.transition(State.INTRO); // LOADING → INTRO → START
 
   if (CONFIG.debug) {

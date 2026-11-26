@@ -14,6 +14,7 @@ const ASSET = 'assets/';
  * scenario — з чого складається анімований фінал (програє animations.js → playReward):
  *   burst     'flash' — спалах екрана кольором нагороди | 'wave' — енергетична хвиля
  *   outline   true — золота лінія обводить рамку екрана
+ *   titleFx   'glitch' — Pixel Glitch заголовка після появи
  *   discount  'drop' — відсоток падає згори | 'zoom' — ефект масштабування
  *   meme      'split' — половинки розходяться | 'bounce' | 'pop' | 'rise' — з платформи
  *   accent    'shine' — світловий відблиск по персонажу
@@ -28,7 +29,7 @@ export const REWARDS = [
   {
     value: 0,
     key: 'r0',
-    scenario: { burst: 'flash', discount: 'drop', meme: 'split', particles: 'debris' },
+    scenario: { burst: 'flash', titleFx: 'glitch', discount: 'drop', meme: 'split', particles: 'debris' },
     title: 'GAME OVER',
     text: 'Бюджет погоджено. Фінансування відсутнє.',
     button: 'ACCEPT REALITY',
@@ -120,6 +121,8 @@ export const CONFIG = {
      * Отвір рамки починається на ~11%, тож 7% ховає краї обкладинки під рамкою.
      */
     coverInset: 0.07,
+    /** Pixel Dissolve: на скільки блоків по стороні розсипаються залишки шару. */
+    dissolveBlocks: 10,
   },
 
   /** Внутрішній отвір card-frame.webp (обчислено tools/build-assets.py). */
@@ -134,7 +137,7 @@ export const CONFIG = {
     gridDraw: 1000,         // промальовування сітки карток
     matchLine: 550,         // лінія між переможними картками
     sceneWipe: 440,         // перехід між сценами (закрити + відкрити)
-    coverFadeOut: 350,
+    coverFadeOut: 350,      // Pixel Dissolve залишків шару
     /** Скільки триває MATCH FOUND перед екраном нагороди (ТЗ: 1,5–2,5 с). */
     matchHold: 2000,
     lockedHint: 1600,

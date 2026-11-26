@@ -192,6 +192,34 @@ export function splitClipPaths(points) {
   ];
 }
 
+/* ---------------- Кнопки ---------------- */
+
+/**
+ * Аркадне натискання. Safari на iPhone не вмикає CSS :active без обробника
+ * дотиків, тому стан «натиснуто» ставимо самі через pointer-події,
+ * а після відпускання кнопка коротко «відскакує».
+ */
+export function bindArcadeButtons(root = document) {
+  root.querySelectorAll('.arcade-btn').forEach((btn) => {
+    const release = () => {
+      if (!btn.classList.contains('is-pressed')) return;
+      btn.classList.remove('is-pressed');
+      btn.classList.add('is-released');
+    };
+    btn.addEventListener('pointerdown', () => {
+      if (btn.disabled) return;
+      btn.classList.remove('is-released');
+      btn.classList.add('is-pressed');
+    });
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointercancel', release);
+    btn.addEventListener('pointerleave', release);
+    btn.addEventListener('animationend', (e) => {
+      if (e.animationName === 'btn-release') btn.classList.remove('is-released');
+    });
+  });
+}
+
 /* ---------------- Повідомлення ---------------- */
 
 const messageTimers = new Map();

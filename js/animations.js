@@ -104,10 +104,13 @@ export function relRect(el, app) {
   };
 }
 
-/** Підігнати SVG-шар під поточний розмір #app (1 одиниця = 1 CSS px). */
-export function fitLineLayer(svg, app) {
-  const { width, height } = app.getBoundingClientRect();
-  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+/**
+ * Підготувати SVG-шар: без viewBox, тож 1 одиниця = 1 CSS px від лівого верхнього
+ * кута #app. (З viewBox браузер масштабував би вже намальоване, якщо висота екрана
+ * зміниться — наприклад, коли у вбудованому браузері з'являється панель.)
+ */
+export function fitLineLayer(svg) {
+  svg.removeAttribute('viewBox');
 }
 
 export function clearLines(svg) {
@@ -200,6 +203,16 @@ export function drawPolyline(scope, svg, points, { duration, color = '#FF79F4', 
   });
 }
 
+/** Погасити й прибрати вже пройдені відрізки — за лінією лишається лише короткий слід. */
+function fadeTrail(scope, paths, duration = 420) {
+  for (const p of paths) {
+    const a = scope.animate(p, [{ opacity: p.getAttribute('opacity') }, { opacity: 0 }], {
+      duration, easing: 'steps(5)', fill: 'forwards',
+    });
+    scope.finished(a).then(() => p.remove());
+  }
+}
+
 /** Плавно погасити всі лінії шару і очистити його. */
 async function fadeLines(scope, svg, duration = 260) {
   const a = scope.animate(svg, [{ opacity: 1 }, { opacity: 0 }], { duration, easing: 'steps(4)' });
@@ -226,6 +239,9 @@ function revealAlong(scope, el, duration, fromRight = false) {
 /**
  * Інтро: піксель → лінія обводить рамку екрана → підкреслює й «відкриває»
  * логотип, заголовок, підказку → обводить кнопку START GAME.
+ * Пройдені відрізки гаснуть слідом за лінією, тож вона ніколи не лишається поверх тексту.
+ * Якщо під час інтро зміниться розмір екрана (поворот, панель браузера), інтро
+ * одразу завершується готовим екраном — лінії не малюються по застарілих координатах.
  * @param {object} els  { app, svg, frame, logo, title, hint, button, sound }
  */
 export async function playIntro(scope, els) {
@@ -246,10 +262,34 @@ export async function playIntro(scope, els) {
 
   targets.forEach((el) => el.classList.add('intro-hidden'));
   els.app.classList.remove('has-frame');
-  fitLineLayer(els.svg, els.app);
+  fitLineLayer(els.svg);
   clearLines(els.svg);
   els.svg.style.opacity = 1;
 
+  // Зміна розміру екрана → завершити інтро достроково.
+  const draw = createScope();
+  scope.onDispose(() => draw.dispose());
+  const resized = new Promise((resolve) => {
+    const start = els.app.getBoundingClientRect();
+    const ro = new ResizeObserver(() => {
+      const now = els.app.getBoundingClientRect();
+      if (Math.abs(now.width - start.width) > 2 || Math.abs(now.height - start.height) > 2) resolve();
+    });
+    ro.observe(els.app);
+    scope.onDispose(() => ro.disconnect());
+    draw.onDispose(() => ro.disconnect());
+  });
+
+  await Promise.race([introSequence(draw, els), resized]);
+  draw.dispose();
+  if (scope.disposed) return;
+  revealAll();
+  els.svg.style.opacity = '';
+  clearLines(els.svg);
+}
+
+/** Власне послідовність ліній інтро (окремий scope, щоб її можна було обірвати). */
+async function introSequence(scope, els) {
   const A = els.app.getBoundingClientRect();
   const F = relRect(els.frame, els.app);
   const L = relRect(els.logo, els.app);
@@ -258,12 +298,13 @@ export async function playIntro(scope, els) {
   const B = relRect(els.button, els.app);
   const cx = A.width / 2;
   const svg = els.svg;
+  const gap = 9; // відступ лінії від тексту
   const speed = (px) => px / T().introLineSpeed * 1000; // мс для відрізка довжиною px
 
   // Порожня горизонталь між підказкою і кнопкою — тут народжується піксель.
   const midY = (H.b + B.t) / 2;
 
-  // 1. Поява стартового пікселя: кілька блимань у центрі.
+  // 1. Поява стартового пікселя: кілька блимань.
   const head = getHead(svg);
   head.style.fill = '#FFB5FF';
   moveHead(head, [cx, midY]);
@@ -272,39 +313,48 @@ export async function playIntro(scope, els) {
   });
   await scope.finished(blink);
 
-  // 2–3. Лінія йде вліво через порожню середину екрана (між підказкою і кнопкою)
-  //      і обводить зовнішню рамку, не перетинаючи майбутні написи.
+  // 2–3. Лінія йде вліво порожньою серединою і обводить рамку екрана.
+  //      Щойно рамка замкнулась, її бере на себе CSS-рамка, а намальована гасне.
   const frameLoop = [
     [cx, midY], [F.l, midY], [F.l, F.t], [F.r, F.t], [F.r, F.b], [F.l, F.b], [F.l, midY],
   ];
-  await drawPolyline(scope, svg, frameLoop, { duration: T().introFrame });
-  els.app.classList.add('has-frame'); // постійна CSS-рамка заміняє намальовану
+  const framePaths = await drawPolyline(scope, svg, frameLoop, { duration: T().introFrame });
+  els.app.classList.add('has-frame');
+  fadeTrail(scope, framePaths);
 
-  // 4. Під логотипом: лінія підіймається вздовж рамки і проходить зліва направо —
-  //    логотип «друкується» слідом за нею.
-  const yL = L.b + 4;
-  await drawPolyline(scope, svg, [[F.l, midY], [F.l, yL], [L.l, yL]], { duration: speed(midY - yL + L.l - F.l) });
+  // 4. Лінія підіймається вздовж рамки і йде під логотипом — логотип «друкується» слідом.
+  const yL = L.b + gap;
+  const toLogo = await drawPolyline(scope, svg, [[F.l, midY], [F.l, yL], [L.l, yL]], { duration: speed(midY - yL + L.l - F.l) });
+  fadeTrail(scope, toLogo);
   const logoDur = speed(L.w);
   revealAlong(scope, els.logo, logoDur);
-  await drawPolyline(scope, svg, [[L.l, yL], [L.r, yL]], { duration: logoDur });
+  const underLogo = await drawPolyline(scope, svg, [[L.l, yL], [L.r, yL]], { duration: logoDur });
+  fadeTrail(scope, underLogo);
 
-  // 5. Другорядні написи: заголовок (справа наліво) і підказка (зліва направо).
-  const yT = Ti.b + 3;
-  await drawPolyline(scope, svg, [[L.r, yL], [L.r, yT], [Ti.r, yT]], { duration: speed(yT - yL + L.r - Ti.r) });
+  // 5. Заголовок (справа наліво) і підказка (зліва направо) — лінія під кожним рядком.
+  const yT = Ti.b + gap;
+  const toTitle = await drawPolyline(scope, svg, [[L.r, yL], [L.r, yT], [Ti.r, yT]], { duration: speed(yT - yL + L.r - Ti.r) });
+  fadeTrail(scope, toTitle);
   const titleDur = speed(Ti.w);
   revealAlong(scope, els.title, titleDur, true);
-  await drawPolyline(scope, svg, [[Ti.r, yT], [Ti.l, yT]], { duration: titleDur });
+  const underTitle = await drawPolyline(scope, svg, [[Ti.r, yT], [Ti.l, yT]], { duration: titleDur });
+  fadeTrail(scope, underTitle);
 
-  const yH = H.b + 3;
-  await drawPolyline(scope, svg, [[Ti.l, yT], [Ti.l, yH], [H.l, yH]], { duration: speed(yH - yT + Math.abs(Ti.l - H.l)) });
+  const yH = H.b + gap;
+  const toHint = await drawPolyline(scope, svg, [[Ti.l, yT], [Math.min(Ti.l, H.l), yT], [Math.min(Ti.l, H.l), yH], [H.l, yH]],
+    { duration: speed(yH - yT + Math.abs(Ti.l - H.l)) });
+  fadeTrail(scope, toHint);
   const hintDur = speed(H.w);
   revealAlong(scope, els.hint, hintDur);
-  await drawPolyline(scope, svg, [[H.l, yH], [H.r, yH]], { duration: hintDur });
+  const underHint = await drawPolyline(scope, svg, [[H.l, yH], [H.r, yH]], { duration: hintDur });
+  fadeTrail(scope, underHint);
 
   // 6. Лінія спускається до кнопки й обводить її — кнопка вмикається.
   const pad = 4;
   const box = { l: B.l + pad, r: B.r - pad, t: B.t + pad, b: B.b - pad };
-  await drawPolyline(scope, svg, [[H.r, yH], [box.r, yH], [box.r, box.t]], { duration: speed(Math.abs(box.r - H.r) + box.t - yH) });
+  const toButton = await drawPolyline(scope, svg, [[H.r, yH], [Math.max(H.r, box.r), yH], [Math.max(H.r, box.r), box.t], [box.r, box.t]],
+    { duration: speed(Math.abs(box.r - H.r) + box.t - yH) });
+  fadeTrail(scope, toButton);
   const outline = [[box.r, box.t], [box.r, box.b], [box.l, box.b], [box.l, box.t], [box.r, box.t]];
   const btnDur = speed(polyLength(outline));
   revealAlong(scope, els.button, btnDur, true);
@@ -315,7 +365,6 @@ export async function playIntro(scope, els) {
   els.sound.classList.remove('intro-hidden');
   scope.animate(els.sound, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'steps(4)' });
   await fadeLines(scope, svg);
-  svg.style.opacity = '';
 }
 
 /* ================================================================== */
@@ -341,7 +390,7 @@ export async function buildGrid(scope, { svg, app, board, cards, columns = 3 }) 
   }
 
   board.classList.add('is-building');
-  fitLineLayer(svg, app);
+  fitLineLayer(svg);
   clearLines(svg);
   svg.style.opacity = 1;
 
@@ -394,7 +443,7 @@ export async function buildGrid(scope, { svg, app, board, cards, columns = 3 }) 
 
 /** З'єднати центри переможних карток ламаною «як на схемі» в кольорі нагороди. */
 export async function drawMatchLine(scope, { svg, app, cards, colors }) {
-  fitLineLayer(svg, app);
+  fitLineLayer(svg);
   clearLines(svg);
   svg.style.opacity = 1;
   const centers = cards.map((el) => {
@@ -565,7 +614,7 @@ export async function playReward(scope, { reward, scene, app, svg, frame, partic
 
   // 2. Легендарна нагорода: золота лінія обводить рамку екрана.
   if (s.outline) {
-    fitLineLayer(svg, app);
+    fitLineLayer(svg);
     clearLines(svg);
     const F = relRect(frame, app);
     const loop = [[F.l, F.b], [F.l, F.t], [F.r, F.t], [F.r, F.b], [F.l, F.b]];
@@ -579,6 +628,14 @@ export async function playReward(scope, { reward, scene, app, svg, frame, partic
   // 3. Назва категорії.
   title.classList.add('is-on');
   revealAlong(scope, title, 380);
+  if (s.titleFx === 'glitch') {
+    // Pixel Glitch: після появи заголовок коротко «збоїть», як екран старого автомата.
+    scope.wait(420).then(() => {
+      title.classList.add('is-glitch');
+      scope.wait(560).then(() => title.classList.remove('is-glitch'));
+    });
+    scope.onDispose(() => title.classList.remove('is-glitch'));
+  }
   await scope.wait(320);
 
   // 4. Великий відсоток.

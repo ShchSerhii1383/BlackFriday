@@ -15,9 +15,11 @@
   <link rel="preload" href="assets/ui/black-friday-logo.webp" as="image">
   <link rel="preload" href="assets/ui/arcade-button.webp" as="image">
 
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/animations.css">
-  <link rel="stylesheet" href="css/responsive.css">
+  <!-- ?v=… — мітка версії: після оновлення файлів змініть її, щоб Safari і GitHub Pages
+       не показували старі CSS/JS з кешу -->
+  <link rel="stylesheet" href="css/style.css?v=2026-11-26d">
+  <link rel="stylesheet" href="css/animations.css?v=2026-11-26d">
+  <link rel="stylesheet" href="css/responsive.css?v=2026-11-26d">
 </head>
 <body>
   <div id="app" class="app" data-state="loading">
@@ -35,7 +37,11 @@
     <!-- Scene 02: START SCREEN -->
     <section class="scene scene--start" data-scene="start" aria-label="Стартовий екран">
       <div class="start__top">
-        <img class="logo" src="assets/ui/black-friday-logo.webp" alt="Black Friday" width="960" height="456">
+        <div class="logo-wrap" id="start-logo">
+          <img class="logo" src="assets/ui/black-friday-logo.webp" alt="Black Friday" width="960" height="456">
+          <!-- Блиск: світла смуга, обрізана маскою по силуету логотипа -->
+          <div class="logo-shine" aria-hidden="true"></div>
+        </div>
         <h1 class="title-pixel start__title" data-text="gameTitle">DISCOUNT HUNT</h1>
         <p class="hint" data-text="startHint">Знайди три однакові знижки</p>
       </div>
@@ -101,6 +107,6 @@
   </div>
 
   <noscript><p class="noscript">Для гри потрібен JavaScript.</p></noscript>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=2026-11-26d"></script>
 </body>
 </html>

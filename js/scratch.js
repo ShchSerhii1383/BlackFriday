@@ -137,6 +137,7 @@ export class ScratchCard {
 
   /** Підігнати canvas під поточний розмір і перемалювати шар зі збереженими штампами. */
   resize() {
+    if (this.state === CardState.REVEALED) return; // шар уже розсипано — не відновлювати
     const size = this.canvas.clientWidth;
     if (!size || size === this.cssSize) return;
     this.cssSize = size;
@@ -152,7 +153,44 @@ export class ScratchCard {
     this._endStroke();
     this.state = CardState.REVEALED;
     this.canvas.closest('.card')?.classList.add('is-revealed');
+    this._dissolve();
     this.callbacks.onReveal?.(this);
+  }
+
+  /**
+   * Pixel Dissolve: залишки захисного шару зникають випадковими квадратними
+   * блоками за CONFIG.timing.coverFadeOut мс. Суто візуальний ефект —
+   * картка вже зарахована, гра на нього не чекає.
+   */
+  _dissolve() {
+    const { ctx, canvas } = this;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const n = S.dissolveBlocks;
+    const order = [...Array(n * n).keys()];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    const block = canvas.width / n;
+    const duration = reduced ? 0 : CONFIG.timing.coverFadeOut;
+    let cleared = 0;
+    let start = null;
+
+    ctx.globalCompositeOperation = 'source-over';
+    const step = (now) => {
+      start ??= now;
+      const target = duration ? Math.min(order.length, Math.ceil(((now - start) / duration) * order.length)) : order.length;
+      for (; cleared < target; cleared++) {
+        const k = order[cleared];
+        ctx.clearRect(Math.floor((k % n) * block), Math.floor(Math.floor(k / n) * block), Math.ceil(block), Math.ceil(block));
+      }
+      if (cleared < order.length) {
+        this._dissolveFrame = requestAnimationFrame(step);
+      } else {
+        canvas.style.visibility = 'hidden';
+      }
+    };
+    this._dissolveFrame = requestAnimationFrame(step);
   }
 
   /** Остаточно вимкнути нерозкриту картку (знайдено комбінацію). Активний штрих обривається. */
@@ -164,6 +202,7 @@ export class ScratchCard {
   }
 
   destroy() {
+    cancelAnimationFrame(this._dissolveFrame);
     this._endStroke();
     this.canvas.removeEventListener('pointerdown', this._onDown);
     this._resizeObserver.disconnect();

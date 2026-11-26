@@ -36,7 +36,8 @@
 @media (min-width: 600px) {
   body { display: grid; place-items: center; }
   .app {
-    height: min(var(--app-h), 900px);
+    /* Висота під фактичний вміст гри — без порожнечі над і під полем */
+    height: min(var(--app-h), 780px);
     box-shadow: 0 0 0 2px var(--c-dark-purple), 0 0 0 4px var(--c-bg), 0 0 0 6px var(--c-metal-purple);
   }
 }

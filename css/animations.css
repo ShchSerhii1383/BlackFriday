@@ -6,8 +6,16 @@
 
 /* Кнопка в очікуванні: м'яка «дихаюча» пульсація сходинками */
 .arcade-btn.is-pulse { animation: btn-pulse 1.4s steps(6) infinite; }
-.arcade-btn.is-pulse:active,
 .arcade-btn.is-pulse.is-pressed { animation: none; }
+
+/* Після відпускання кнопка коротко «відскакує» вгору */
+.arcade-btn.is-released { animation: btn-release 180ms steps(3); }
+
+@keyframes btn-release {
+  0% { transform: translateY(calc(var(--px) * 2)) scale(0.985); filter: brightness(0.82); }
+  60% { transform: translateY(calc(var(--px) * -1)) scale(1.01); filter: brightness(1.25); }
+  100% { transform: none; filter: none; }
+}
 
 @keyframes btn-pulse {
   0%, 100% { transform: scale(1); }
@@ -78,3 +86,27 @@
 /* Прихованим сценам анімації не потрібні — ставимо їх на паузу */
 .scene:not(.is-active),
 .scene:not(.is-active) * { animation-play-state: paused !important; }
+
+/* Pixel Glitch: короткий збій «зображення» — зсуви смуг і кольорові розриви (≈0,5 с, один раз) */
+.is-glitch { animation: pixel-glitch 520ms steps(1); }
+
+@keyframes pixel-glitch {
+  0%   { transform: translate(0); clip-path: inset(0 0 0 0); }
+  12%  { transform: translate(-4px, 0); clip-path: inset(10% 0 55% 0); }
+  24%  { transform: translate(4px, 1px); clip-path: inset(60% 0 8% 0); }
+  36%  { transform: translate(-2px, 0); clip-path: inset(30% 0 35% 0); filter: hue-rotate(40deg) brightness(1.6); }
+  48%  { transform: translate(3px, -1px); clip-path: inset(0 0 70% 0); }
+  60%  { transform: translate(0); clip-path: inset(0 0 0 0); filter: none; }
+  72%  { transform: translate(-3px, 0); clip-path: inset(45% 0 20% 0); }
+  84%  { transform: translate(2px, 0); clip-path: inset(0 0 0 0); }
+  100% { transform: translate(0); clip-path: inset(0 0 0 0); }
+}
+
+/* Блиск на BLACK FRIDAY: прохід ≈0,9 с, далі пауза — раз на 4,5 с, без мерехтіння */
+.logo-wrap.is-shining .logo-shine { animation: logo-shine 4.5s linear 0.2s infinite; }
+
+@keyframes logo-shine {
+  0%   { background-position: 85% 0; opacity: 1; }
+  20%  { background-position: 15% 0; opacity: 1; }
+  21%, 100% { background-position: 15% 0; opacity: 0; }
+}
