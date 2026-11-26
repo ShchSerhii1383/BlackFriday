@@ -37,10 +37,20 @@ TARGETS = {
     "rewards/discount-33.png": 900,
     "rewards/discount-66.png": 900,
     "rewards/discount-100.png": 900,
-    "memes/meme-0-broken-heart.png": 780,
-    "memes/meme-33-shopping-bear.png": 780,
-    "memes/meme-66-financial-rat.png": 780,
-    "memes/meme-100-legendary-unicorn.png": 780,
+}
+# Усі мемні персонажі з _source/memes/ (будь-яка кількість) — однаковий розмір
+MEME_MAX = 780
+
+# Секретна локація.  crop=False — зберегти полотно як є:
+#  - фон кімнати непрозорий, координати предметів рахуються від його повного розміру;
+#  - закритий і відкритий подарунок мають спільне полотно, щоб їх можна було точно вирівняти.
+SECRET = {
+    "secret-room-background.png": {"max": 1672, "crop": False},
+    "secret-portal.png": {"max": 900, "crop": True},
+    "secret-achievement-badge.png": {"max": 780, "crop": True},
+    "secret-gift-closed.png": {"max": 768, "crop": False},
+    "secret-gift-open.png": {"max": 768, "crop": False},
+    "secret-greeting-panel.png": {"max": 1100, "crop": True},
 }
 
 
@@ -96,43 +106,34 @@ def frame_hole(frame):
     }
 
 
-def split_line(im, step=20):
+# Отвір настінної фоторамки у пікселях фону кімнати (941 × 1672) — ті самі числа,
+# що й secretConfig.room.photoFrame у js/secret-config.js.
+PHOTO_FRAME = {"x": 388, "y": 116, "w": 284, "h": 412}
+# Ділянка, де кінчики квітів букета заходять в отвір рамки.
+BOUQUET_AREA = {"x": 428, "y": 476, "w": 140, "h": 56}
+WALL_COLOR = (62, 13, 69)     # колір стіни всередині рамки (медіана)
+WALL_DISTANCE = 95            # піксель далі від кольору стіни = квітка
+
+
+def bouquet_overlay():
     """
-    Лінія розлому між двома НЕ з'єднаними частинами зображення (розбите серце).
-    Повертає точки [x%, y%] зверху вниз — їх копіюють у REWARDS[...].split у config.js.
+    Квіти поверх фото: з того самого фону вирізаються лише пікселі квітів
+    (усе, що помітно відрізняється від кольору стіни) у ділянці BOUQUET_AREA.
+    Ця накладка кладеться над фотографією, тож букет «стоїть перед» нею.
+    Нічого не малюється вручну — лише автоматичне вирізання з оригіналу.
     """
-    from collections import deque
-    w, h = im.size
-    a = im.getchannel("A").load()
-    label = [[0] * w for _ in range(h)]
-    sizes, cur = {}, 0
-    for y in range(h):
-        for x in range(w):
-            if a[x, y] and not label[y][x]:
-                cur += 1
-                label[y][x] = cur
-                queue, n = deque([(x, y)]), 0
-                while queue:
-                    cx, cy = queue.popleft()
-                    n += 1
-                    for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
-                        if 0 <= nx < w and 0 <= ny < h and a[nx, ny] and not label[ny][nx]:
-                            label[ny][nx] = cur
-                            queue.append((nx, ny))
-                sizes[cur] = n
-    left, right = sorted(sorted(sizes, key=sizes.get)[-2:],
-                         key=lambda l: next(x for x in range(w) for y in range(0, h, 4) if label[y][x] == l))
-    points = []
-    for y in list(range(0, h, step)) + [h - 1]:
-        row = label[y]
-        lmax = max((x for x in range(w) if row[x] == left), default=None)
-        rmin = min((x for x in range(w) if row[x] == right), default=None)
-        if lmax is not None and rmin is not None:
-            x = (lmax + rmin) / 2
-        else:
-            x = (lmax + 2) if lmax is not None else (rmin - 2) if rmin is not None else w / 2
-        points.append([round(x / w * 100, 1), round(y / (h - 1) * 100, 1)])
-    return points
+    bg = Image.open(os.path.join(SRC, "secret", "secret-room-background.png")).convert("RGB")
+    a = BOUQUET_AREA
+    crop = bg.crop((a["x"], a["y"], a["x"] + a["w"], a["y"] + a["h"])).convert("RGBA")
+    px = crop.load()
+    for y in range(crop.height):
+        for x in range(crop.width):
+            r, g, b, _ = px[x, y]
+            far = abs(r - WALL_COLOR[0]) + abs(g - WALL_COLOR[1]) + abs(b - WALL_COLOR[2]) > WALL_DISTANCE
+            px[x, y] = (r, g, b, 255 if far else 0)
+    path = os.path.join(OUT, "secret", "room-bouquet-overlay.webp")
+    crop.save(path, "WEBP", lossless=True)
+    return {"area": a, "kb": round(os.path.getsize(path) / 1024, 1)}
 
 
 def build_images():
@@ -142,10 +143,35 @@ def build_images():
         if rel == "ui/card-frame.png":
             report["frameHole"] = frame_hole(im)
         im.thumbnail((max_side, max_side), Image.LANCZOS)
-        if rel == "memes/meme-0-broken-heart.png":
-            report["heartSplit"] = split_line(im)
         path, size = save_webp(im, rel)
         report[rel] = {"size": size, "ratio": round(size[0] / size[1], 3), "kb": round(os.path.getsize(path) / 1024, 1)}
+
+    # Мемні персонажі: обрізати до вмісту, зберегти пропорції.
+    # ratio потрібне для memes[].scale у config.js (вирівнювання «на око»).
+    for f in sorted(os.listdir(os.path.join(SRC, "memes"))):
+        if not f.endswith(".png"):
+            continue
+        rel = f"memes/{f}"
+        im = crop_to_content(load_clean(rel))
+        ratio = im.width / im.height
+        im.thumbnail((MEME_MAX, MEME_MAX), Image.LANCZOS)
+        path, size = save_webp(im, rel)
+        report[rel] = {"size": size, "ratio": round(ratio, 3), "kb": round(os.path.getsize(path) / 1024, 1)}
+
+    # Секретна локація
+    for f, opt in SECRET.items():
+        rel = f"secret/{f}"
+        im = load_clean(rel)
+        if opt["crop"]:
+            im = crop_to_content(im)
+        im.thumbnail((opt["max"], opt["max"]), Image.LANCZOS)
+        if f == "secret-room-background.png":
+            im = im.convert("RGB")  # фон непрозорий — альфа-канал не потрібен
+        path, size = save_webp(im, rel)
+        report[rel] = {"size": size, "kb": round(os.path.getsize(path) / 1024, 1)}
+    report["secret/room-bouquet-overlay"] = bouquet_overlay()
+    # SVG-заглушка фото копіюється як є
+    shutil.copy(os.path.join(SRC, "secret", "photo-placeholder.svg"), os.path.join(OUT, "secret", "photo-placeholder.svg"))
 
     # Індикатори: у джерелі різні полотна й масштаби. Вирівнюємо обидва
     # в однакові квадрати, щоб при заміні empty → filled нічого не «стрибало».

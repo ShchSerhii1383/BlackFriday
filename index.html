@@ -17,9 +17,10 @@
 
   <!-- ?v=… — мітка версії: після оновлення файлів змініть її, щоб Safari і GitHub Pages
        не показували старі CSS/JS з кешу -->
-  <link rel="stylesheet" href="css/style.css?v=2026-11-26d">
-  <link rel="stylesheet" href="css/animations.css?v=2026-11-26d">
-  <link rel="stylesheet" href="css/responsive.css?v=2026-11-26d">
+  <link rel="stylesheet" href="css/style.css?v=2026-11-27a">
+  <link rel="stylesheet" href="css/animations.css?v=2026-11-27a">
+  <link rel="stylesheet" href="css/responsive.css?v=2026-11-27a">
+  <link rel="stylesheet" href="css/secret.css?v=2026-11-27a">
 </head>
 <body>
   <div id="app" class="app" data-state="loading">
@@ -46,6 +47,10 @@
         <p class="hint" data-text="startHint">Знайди три однакові знижки</p>
       </div>
       <div class="start__bottom">
+        <!-- Корона: з'являється лише після того, як секретну кімнату вже побачили -->
+        <button class="start-crown" id="start-crown" type="button" aria-label="Секретна кімната" hidden>
+          <span class="start-crown__icon" aria-hidden="true"></span>
+        </button>
         <button class="arcade-btn is-pulse" id="start-btn" type="button">
           <span class="arcade-btn__label" data-text="startButton">START GAME</span>
         </button>
@@ -77,9 +82,6 @@
       <img class="reward__discount" id="reward-discount" alt="">
       <div class="reward__stage">
         <img class="reward__meme" id="reward-meme" alt="">
-        <!-- Дві половинки того самого асета (лише для нагород з config.split — розбите серце) -->
-        <img class="reward__meme-half" data-half="left" alt="" aria-hidden="true">
-        <img class="reward__meme-half" data-half="right" alt="" aria-hidden="true">
         <!-- Світловий відблиск по силуету персонажа (маска — сам асет) -->
         <div class="reward__shine" aria-hidden="true"></div>
         <div class="reward__platform" aria-hidden="true"></div>
@@ -92,6 +94,109 @@
       <!-- Програмні ефекти фіналу: спалах екрана та енергетична хвиля -->
       <div class="reward__flash" aria-hidden="true"></div>
       <div class="reward__wave" aria-hidden="true"></div>
+    </section>
+
+    <!--
+      SECRET LEVEL (ТЗ 2.0, розділи 08–11). Прихований до відкриття: зображення не мають src,
+      тож нічого не завантажується, доки secret.js не підвантажить асети (після 4-ї гри).
+    -->
+    <section class="scene scene--secret" data-scene="secret" data-step="" aria-label="Секретний рівень">
+      <div class="secret__dim" aria-hidden="true"></div>
+      <canvas class="secret__noise" id="secret-noise" aria-hidden="true"></canvas>
+
+      <!-- Етап A — System Glitch -->
+      <div class="secret__step secret__error" data-for="error" aria-live="assertive">
+        <p class="secret__error-line" id="secret-error-1">SYSTEM ERROR</p>
+        <p class="secret__error-line secret__error-line--sub" id="secret-error-2">UNKNOWN REWARD DETECTED</p>
+      </div>
+
+      <!-- Етап B — Hidden Achievement -->
+      <div class="secret__step secret__achievement" data-for="achievement">
+        <p class="secret__kicker">HIDDEN ACHIEVEMENT</p>
+        <div class="secret__art secret__badge-wrap">
+          <img class="secret__img" id="secret-badge" alt="Медаль Sales Queen" data-src="assets/secret/secret-achievement-badge.webp">
+          <canvas class="secret__assemble" aria-hidden="true"></canvas>
+          <div class="secret__shine" aria-hidden="true"></div>
+          <i class="secret__star" style="--x:6%;--y:18%;--d:0s" aria-hidden="true"></i>
+          <i class="secret__star" style="--x:90%;--y:12%;--d:.6s" aria-hidden="true"></i>
+          <i class="secret__star" style="--x:96%;--y:62%;--d:1.1s" aria-hidden="true"></i>
+          <i class="secret__star" style="--x:2%;--y:70%;--d:.3s" aria-hidden="true"></i>
+          <i class="secret__star" style="--x:50%;--y:-4%;--d:.9s" aria-hidden="true"></i>
+        </div>
+        <h2 class="secret__title">SALES QUEEN</h2>
+        <p class="secret__kicker secret__kicker--gold">LEGENDARY ACHIEVEMENT</p>
+      </div>
+
+      <!-- Етап C — Secret Portal -->
+      <div class="secret__step secret__portal" data-for="portal">
+        <div class="secret__portal-head">
+          <p class="secret__kicker">SECRET LEVEL UNLOCKED</p>
+          <h2 class="secret__title">SALES QUEEN'S ROOM</h2>
+        </div>
+        <div class="secret__art secret__portal-wrap">
+          <img class="secret__img" id="secret-portal" alt="Магічний портал" data-src="assets/secret/secret-portal.webp">
+          <canvas class="secret__assemble" aria-hidden="true"></canvas>
+        </div>
+        <button class="arcade-btn secret__enter" id="secret-enter-btn" type="button">
+          <span class="arcade-btn__label">ENTER SECRET ROOM</span>
+        </button>
+      </div>
+
+      <!-- Спалах переходу крізь портал -->
+      <div class="secret__whiteout" aria-hidden="true"></div>
+    </section>
+
+    <!-- SALES QUEEN'S SECRET ROOM — повна кімната з'явиться на Етапі 5 -->
+    <section class="scene scene--room" data-scene="room" aria-label="Секретна кімната">
+      <!--
+        Шари кімнати (ТЗ 2.0, розділ 13). Усі в одній системі координат — пікселях фону
+        941 × 1672 (secretConfig.room), тож масштабуються разом із кімнатою.
+      -->
+      <div class="room__stage" id="room-stage">
+        <!-- 01 Background -->
+        <img class="room__bg" id="room-bg" alt="Кімната Sales Queen" data-src="assets/secret/secret-room-background.webp">
+        <!-- 02 Personal Photo: у настінній рамці; кінчики квітів букета — поверх фото -->
+        <div class="room__photo" id="room-photo"><img id="room-photo-img" alt="Фотографія"></div>
+        <img class="room__bouquet" id="room-bouquet" alt="" aria-hidden="true">
+        <!-- 03 Ambient Lighting · 04 Animated Details (Етап 7) -->
+        <div class="room__layer room__ambient" id="room-ambient" aria-hidden="true"></div>
+        <div class="room__layer room__details" id="room-details" aria-hidden="true"></div>
+        <!-- 05 Interactive Hotspots (Етап 7) -->
+        <div class="room__layer room__hotspots" id="room-hotspots"></div>
+        <!-- 06 Secret Gift: два цільні зображення; перехід маскують світло й частинки -->
+        <div class="room__layer room__gift" id="room-gift">
+          <button class="gift" id="gift-btn" type="button" aria-label="Відкрити подарунок">
+            <span class="gift__glow" aria-hidden="true"></span>
+            <span class="gift__box" id="gift-box">
+              <img class="gift__img gift__closed" id="gift-closed" alt="">
+              <img class="gift__img gift__open" id="gift-open" alt="">
+            </span>
+            <span class="gift__light" aria-hidden="true"></span>
+            <i class="secret__star gift__star" style="--x:18%;--y:22%;--d:0s" aria-hidden="true"></i>
+            <i class="secret__star gift__star" style="--x:80%;--y:14%;--d:.7s" aria-hidden="true"></i>
+            <i class="secret__star gift__star" style="--x:86%;--y:66%;--d:1.3s" aria-hidden="true"></i>
+            <i class="secret__star gift__star" style="--x:12%;--y:70%;--d:.4s" aria-hidden="true"></i>
+          </button>
+        </div>
+        <!-- 08 Greeting Panel: рамка — PNG (розтягується по вертикалі без деформації), текст — HTML -->
+        <div class="room__layer room__greeting" id="room-greeting">
+          <div class="greeting" id="greeting" hidden>
+            <div class="greeting__panel" id="greeting-panel" role="dialog" aria-label="Привітання">
+              <h2 class="greeting__title" id="greeting-title"></h2>
+              <div class="greeting__body" id="greeting-body"></div>
+              <p class="greeting__signature" id="greeting-signature"></p>
+            </div>
+            <div class="greeting__nav">
+              <button class="greeting__btn" id="greeting-next" type="button">NEXT &gt;</button>
+              <button class="greeting__btn" id="greeting-close" type="button">OK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 07 Particles — спільний #fx-layer · 09 Navigation -->
+      <button class="room__back" id="room-back" type="button" aria-label="Повернутися до гри">&lt; GAME</button>
+      <!-- Кімната проявляється з теплого спалаху порталу -->
+      <div class="secret__whiteout room__fade" aria-hidden="true"></div>
     </section>
 
     <!-- Спільні елементи поверх сцен -->
@@ -107,6 +212,6 @@
   </div>
 
   <noscript><p class="noscript">Для гри потрібен JavaScript.</p></noscript>
-  <script type="module" src="js/main.js?v=2026-11-26d"></script>
+  <script type="module" src="js/main.js?v=2026-11-27a"></script>
 </body>
 </html>

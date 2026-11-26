@@ -25,6 +25,14 @@ const EVENT_TO_FILE = {
   reward33: 'reward33',
   reward66: 'reward66',
   reward100: 'reward100',
+  // Секретна локація (ТЗ 2.0, розділ 19)
+  glitch: 'systemGlitch',
+  achievement: 'hiddenAchievement',
+  portal: 'secretPortal',
+  portalTransition: 'portalTransition',
+  giftOpen: 'giftOpening',
+  greeting: 'greetingReveal',
+  easterEgg: 'easterEgg',
 };
 
 export const AudioManager = {
@@ -45,6 +53,16 @@ export const AudioManager = {
   play(event) {
     if (!this.canPlay || !EVENT_TO_FILE[event]) return;
     // TODO (майбутнє): відтворити cfg.files[EVENT_TO_FILE[event]] з гучністю cfg.effectsVolume
+  },
+
+  /** Фонова атмосфера секретної кімнати (майбутнє). */
+  startRoomAmbient() {
+    if (!this.canPlay) return;
+    // TODO (майбутнє): цикл cfg.files.secretRoomAmbient з гучністю cfg.musicVolume
+  },
+
+  stopRoomAmbient() {
+    // Безпечно викликати завжди.
   },
 
   startMusic() {
@@ -83,5 +101,6 @@ export const AudioManager = {
   reset() {
     this.stopMusic();
     this.stopScratch();
+    this.stopRoomAmbient();
   },
 };

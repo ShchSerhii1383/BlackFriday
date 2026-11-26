@@ -59,7 +59,7 @@ export function createScope() {
       const a = el.animate(keyframes, options);
       anims.add(a);
       // Анімація з fill 'forwards' після завершення продовжує тримати стан елемента
-      // (наприклад, розсунуті половинки серця) — її знімаємо лише при dispose.
+      // (наприклад, кінцеву позицію ефекту) — її знімаємо лише при dispose.
       const holdsState = options?.fill === 'forwards' || options?.fill === 'both';
       a.finished.then(() => !holdsState && anims.delete(a), () => anims.delete(a));
       return a;
@@ -534,10 +534,18 @@ const ENTRANCES = {
     ],
   },
   meme: {
-    split: [
-      { transform: 'scale(0.4)', opacity: 0 },
-      { transform: 'scale(1.08)', opacity: 1, offset: 0.7 },
-      { transform: 'scale(1)', opacity: 1 },
+    // 0%: персонаж падає згори, важко присідає (сплющується від низу) і коротко тремтить.
+    sink: [
+      { transform: 'translateY(-60%) scale(1, 1)', opacity: 0, transformOrigin: '50% 100%' },
+      { transform: 'translateY(0) scale(1, 1)', opacity: 1, offset: 0.4, transformOrigin: '50% 100%' },
+      { transform: 'translateY(0) scale(1.12, 0.82)', offset: 0.5, transformOrigin: '50% 100%' },
+      { transform: 'translateY(0) scale(0.97, 1.04)', offset: 0.62, transformOrigin: '50% 100%' },
+      { transform: 'translateY(0) scale(1, 1)', offset: 0.7, transformOrigin: '50% 100%' },
+      { transform: 'translateX(-3px)', offset: 0.76, transformOrigin: '50% 100%' },
+      { transform: 'translateX(3px)', offset: 0.82, transformOrigin: '50% 100%' },
+      { transform: 'translateX(-2px)', offset: 0.88, transformOrigin: '50% 100%' },
+      { transform: 'translateX(2px)', offset: 0.94, transformOrigin: '50% 100%' },
+      { transform: 'none', opacity: 1, transformOrigin: '50% 100%' },
     ],
     pop: [
       { transform: 'scale(0.4)', opacity: 0 },
@@ -591,7 +599,6 @@ export async function playReward(scope, { reward, scene, app, svg, frame, partic
   if (prefersReducedMotion()) {
     finish();
     if (s.outline) app.classList.add('is-legendary');
-    if (s.meme === 'split') splitHalves(scope, scene, 0);
     return;
   }
 
@@ -651,16 +658,21 @@ export async function playReward(scope, { reward, scene, app, svg, frame, partic
   }
 
   // 5. Персонаж.
-  const memeDur = { split: 360, pop: 420, bounce: 820, rise: 720 }[s.meme] || 420;
-  await scope.finished(enter(scope, stage, ENTRANCES.meme[s.meme] || ENTRANCES.meme.pop, memeDur, s.meme === 'bounce' ? 16 : 8));
+  const memeDur = { sink: 900, pop: 420, bounce: 820, rise: 720 }[s.meme] || 420;
+  const memeSteps = { sink: 18, bounce: 16 }[s.meme] || 8;
+  const memeAnim = enter(scope, stage, ENTRANCES.meme[s.meme] || ENTRANCES.meme.pop, memeDur, memeSteps);
+  if (s.particles === 'debris') {
+    // Червоні уламки сиплються в момент важкого «приземлення».
+    scope.wait(memeDur * 0.45).then(() => {
+      const [, , r] = center(stage);
+      particles.rain([c.main, c.light, c.dark], 22, { x0: r.l + r.w * 0.2, x1: r.r - r.w * 0.2, y: r.t + r.h * 0.15 });
+      particles.rain([c.main, c.dark], 18, { x0: r.l, x1: r.r, y: -10 });
+    });
+  }
+  await scope.finished(memeAnim);
   const [mx, my, mr] = center(stage);
 
   // 6. Частинки та акценти персонажа.
-  if (s.meme === 'split') {
-    splitHalves(scope, scene, 520);
-    particles.rain([c.main, c.light, c.dark], 26, { x0: mx - mr.w * 0.12, x1: mx + mr.w * 0.12, y: mr.t + mr.h * 0.3 });
-    particles.rain([c.main, c.dark], 18, { x0: mr.l, x1: mr.r, y: -10 });
-  }
   if (s.particles === 'sparkle') {
     particles.burst(mx, my, [c.main, c.light, '#FFFFFF'], 28);
     scope.wait(260).then(() => particles.burst(mx, mr.t + mr.h * 0.25, [c.main, c.light], 18, 150));
@@ -674,7 +686,8 @@ export async function playReward(scope, { reward, scene, app, svg, frame, partic
     ], { duration: 650, easing: 'steps(12)' }));
   }
   if (s.particles === 'celebration') celebrate(scope, { particles, app, c, stageRect: mr });
-  if (s.meme !== 'split') stage.classList.add('is-idle');
+  // Після появи персонаж ледь помітно «дихає»; сумний персонаж 0% лишається нерухомим.
+  if (s.meme !== 'sink') stage.classList.add('is-idle');
   await scope.wait(380);
 
   // 7. Мемний текст «друкується» зліва направо.
@@ -689,14 +702,6 @@ export async function playReward(scope, { reward, scene, app, svg, frame, partic
     { transform: 'scale(1)', opacity: 1 },
   ], 280, 5));
   finish();
-}
-
-/** Розсунути половинки розбитого серця по лінії розлому (стан зберігається). */
-function splitHalves(scope, scene, duration) {
-  const [left, right] = scene.querySelectorAll('.reward__meme-half');
-  const opts = { duration, easing: 'steps(6)', fill: 'forwards' };
-  scope.animate(left, [{ transform: 'none' }, { transform: 'translate(-6%, 2%) rotate(-7deg)' }], opts);
-  scope.animate(right, [{ transform: 'none' }, { transform: 'translate(6%, 3%) rotate(7deg)' }], opts);
 }
 
 /** LEGENDARY DROP: золотий піксельний салют, веселкові частинки і конфеті. */

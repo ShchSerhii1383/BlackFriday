@@ -143,6 +143,13 @@ button { font: inherit; color: inherit; }
   opacity: 0;
 }
 .scene.is-active { visibility: visible; opacity: 1; }
+/*
+ * Неактивна сцена ховає ВСІХ нащадків і не приймає дотиків. Інакше елемент з явним
+ * visibility: visible (відкритий подарунок, надруковані написи секрету) лишався б
+ * видимим або «невидимо клікабельним» поверх іншої сцени.
+ */
+.scene:not(.is-active) { pointer-events: none; }
+.scene:not(.is-active) * { visibility: hidden !important; }
 
 /* ---------- Типографіка ---------- */
 
@@ -495,22 +502,11 @@ button { font: inherit; color: inherit; }
 }
 .reward__meme {
   /* базова висота × CONFIG memeScale (вирівнювання персонажів «на око») */
-  height: calc(clamp(130px, 30dvh, 270px) * var(--meme-scale, 1));
+  height: calc(clamp(124px, 28dvh, 260px) * var(--meme-scale, 1));
   width: auto;
   max-width: 86vw;
   object-fit: contain;
 }
-/* Розбите серце: замість цілого зображення — дві половинки, складені точно по лінії розлому */
-.reward__meme-half {
-  display: none;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.reward__stage.has-split .reward__meme { visibility: hidden; }
-.reward__stage.has-split .reward__meme-half { display: block; }
 /* Піксельна платформа під єдинорогом: ховає обрізаний нижній край асета */
 .reward__platform {
   display: none;

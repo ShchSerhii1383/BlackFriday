@@ -7,92 +7,120 @@
 
 const ASSET = 'assets/';
 
+/** Шлях до WebP-копії мемного персонажа. */
+const meme = (file) => `${ASSET}memes/${file}.webp`;
+
 /**
  * Чотири нагороди описані ОДНІЄЮ структурою.
  * Ігрова логіка працює лише з цим масивом і не знає про конкретні значення.
+ *
+ * memes   — 3 персонажі знижки. На кожен результат обирається один персонаж
+ *           і одна фраза — незалежно одне від одного (3 × 5 = 15 комбінацій).
+ *   scale    візуальне вирівнювання: асети мають різні пропорції (Nyan Cat широкий,
+ *            єдиноріг високий), тож однакова висота робила б їх різними «на око».
+ *            Множник ≈ 1/√(ширина/висота); легендарні трохи більші навмисно.
+ *   platform true — персонаж стоїть на піксельній платформі (у єдинорога
+ *            нижній край асета обрізаний у джерелі).
+ * phrases — 5 затверджених мемних фраз (ТЗ 2.0, розділ 06).
  *
  * scenario — з чого складається анімований фінал (програє animations.js → playReward):
  *   burst     'flash' — спалах екрана кольором нагороди | 'wave' — енергетична хвиля
  *   outline   true — золота лінія обводить рамку екрана
  *   titleFx   'glitch' — Pixel Glitch заголовка після появи
  *   discount  'drop' — відсоток падає згори | 'zoom' — ефект масштабування
- *   meme      'split' — половинки розходяться | 'bounce' | 'pop' | 'rise' — з платформи
+ *   meme      'sink' — падає, важко присідає і тремтить | 'bounce' | 'pop' | 'rise' — з платформи
  *   accent    'shine' — світловий відблиск по персонажу
  *   particles 'debris' — червоні уламки | 'sparkle' — іскри | 'celebration' — салют, веселка, конфеті
- *
- * memeScale — візуальне вирівнювання персонажів: асети мають різні пропорції
- * (серце широке, єдиноріг високий), тож однакова висота робила б їх різними
- * «на око». Множник приблизно вирівнює площу; єдиноріг трохи більший навмисно —
- * це найвидовищніша нагорода.
  */
 export const REWARDS = [
   {
     value: 0,
     key: 'r0',
-    scenario: { burst: 'flash', titleFx: 'glitch', discount: 'drop', meme: 'split', particles: 'debris' },
+    scenario: { burst: 'flash', titleFx: 'glitch', discount: 'drop', meme: 'sink', particles: 'debris' },
     title: 'GAME OVER',
-    text: 'Бюджет погоджено. Фінансування відсутнє.',
     button: 'ACCEPT REALITY',
     confirm: 'REALITY ACCEPTED',
     colors: { main: '#FF3B50', dark: '#590C24', light: '#FFB0B8' },
     discountImg: `${ASSET}rewards/discount-0.webp`,
-    memeImg: `${ASSET}memes/meme-0-broken-heart.webp`,
-    memeAlt: 'Розбите піксельне серце',
-    memeScale: 0.88,
-    platform: false,
-    /**
-     * Лінія розлому між половинками серця: точки [x%, y%] зверху вниз.
-     * Половинки на асеті не торкаються, тож лінія ділить їх без похибки
-     * (перевірено попіксельно). Phase 04 розсуває половинки по цій лінії.
-     * Генерується tools/build-assets.py (heartSplit) — оновити, якщо змінився асет.
-     */
-    split: [[49.7, 0], [49.8, 3.4], [49.9, 6.8], [49.9, 10.3], [49.9, 13.7], [49.4, 17.1], [49.4, 20.5], [49.4, 23.9], [49.4, 27.4], [48.1, 30.8], [46, 34.2], [44, 37.6], [42.4, 41], [43.4, 44.4], [45.3, 47.9], [47.5, 51.3], [48.8, 54.7], [47.6, 58.1], [45.4, 61.5], [43.1, 65], [43.2, 68.4], [44.9, 71.8], [46.8, 75.2], [48.3, 78.6], [47.4, 82.1], [46.2, 85.5], [46.3, 88.9], [45.7, 92.3], [45.7, 95.7], [48.2, 99.1], [48.7, 100]],
+    memes: [
+      { key: 'bankrupt-raccoon', img: meme('meme-0-bankrupt-raccoon'), alt: 'Єнот-банкрут', scale: 1.02 },
+      { key: 'crying-cat', img: meme('meme-0-crying-cat'), alt: 'Кіт, що плаче', scale: 1.08 },
+      { key: 'crying-pepe', img: meme('meme-0-crying-pepe'), alt: 'Пепе, що плаче', scale: 1.06 },
+    ],
+    phrases: [
+      'Бюджет погоджено. Фінансування відсутнє.',
+      'Знижка була в плані, але не у факті.',
+      'Навіть Excel не зміг знайти позитивний сценарій.',
+      'Очікувала Black Friday, отримала Black Monday.',
+      'Фінансовий результат: мінус настрій.',
+    ],
   },
   {
     value: 33,
     key: 'r33',
     scenario: { burst: 'flash', discount: 'drop', meme: 'bounce', particles: 'sparkle' },
     title: 'COMMON DROP',
-    text: 'Заощадила 33%, щоб витратити ще більше.',
     button: 'CLAIM REWARD',
     confirm: 'REWARD CLAIMED',
     colors: { main: '#38D7FF', dark: '#125577', light: '#B5F5FF' },
     discountImg: `${ASSET}rewards/discount-33.webp`,
-    memeImg: `${ASSET}memes/meme-33-shopping-bear.webp`,
-    memeAlt: 'Ведмедик із покупками',
-    memeScale: 1,
-    platform: false,
+    memes: [
+      { key: 'shopping-bear', img: meme('meme-33-shopping-bear'), alt: 'Ведмедик із покупками', scale: 1 },
+      { key: 'shopping-doge', img: meme('meme-33-shopping-doge'), alt: 'Доге з покупками', scale: 1 },
+      { key: 'shopping-hamster', img: meme('meme-33-shopping-hamster'), alt: "Хом'як із покупками", scale: 1 },
+    ],
+    phrases: [
+      'Заощадила 33%, щоб витратити ще більше.',
+      'Економію отримано. Бюджет успішно освоєно.',
+      'Купила не тому, що потрібно, а тому, що вигідно.',
+      'Фінансовий план виконано. Кошик перевиконано.',
+      'Знижка невелика, але потенціал витрат величезний.',
+    ],
   },
   {
     value: 66,
     key: 'r66',
     scenario: { burst: 'wave', discount: 'drop', meme: 'pop', accent: 'shine', particles: 'sparkle' },
     title: 'EPIC DROP',
-    text: 'Витрати перекласифіковано в інвестиції у власне щастя.',
     button: 'CLAIM REWARD',
     confirm: 'REWARD CLAIMED',
     colors: { main: '#B64BFF', dark: '#58158B', light: '#E6B8FF' },
     discountImg: `${ASSET}rewards/discount-66.webp`,
-    memeImg: `${ASSET}memes/meme-66-financial-rat.webp`,
-    memeAlt: 'Щур-фінансист',
-    memeScale: 1.06,
-    platform: false,
+    memes: [
+      { key: 'financial-rat', img: meme('meme-66-financial-rat'), alt: 'Щур-фінансист', scale: 1.01 },
+      { key: 'stonks', img: meme('meme-66-stonks'), alt: 'Stonks', scale: 0.99 },
+      { key: 'financial-monkey', img: meme('meme-66-financial-monkey'), alt: 'Мавпа-фінансист', scale: 0.99 },
+    ],
+    phrases: [
+      'Витрати перекласифіковано в інвестиції у власне щастя.',
+      'Не купити з такою знижкою — це вже фінансові збитки.',
+      'Excel підтвердив: покупка економічно обґрунтована.',
+      'Це не шопінг. Це оптимізація грошових потоків.',
+      'Фінансові махінації? Ні, ефективне управління бюджетом.',
+    ],
   },
   {
     value: 100,
     key: 'r100',
     scenario: { burst: 'flash', outline: true, discount: 'zoom', meme: 'rise', particles: 'celebration' },
     title: 'LEGENDARY DROP',
-    text: 'Аудитори в шоці. Фінансистка задоволена.',
     button: 'CLAIM REWARD',
     confirm: 'REWARD CLAIMED',
     colors: { main: '#FFBF32', dark: '#91500C', light: '#FFF1A3' },
     discountImg: `${ASSET}rewards/discount-100.webp`,
-    memeImg: `${ASSET}memes/meme-100-legendary-unicorn.webp`,
-    memeAlt: 'Легендарний єдиноріг',
-    memeScale: 1.12,
-    // Нижній край асета обрізаний у джерелі — ставимо персонажа на піксельну платформу.
-    platform: true,
+    memes: [
+      // Нижній край асета єдинорога обрізаний у джерелі — ставимо його на платформу.
+      { key: 'legendary-unicorn', img: meme('meme-100-legendary-unicorn'), alt: 'Легендарний єдиноріг', scale: 1.12, platform: true },
+      { key: 'legendary-nyan-cat', img: meme('meme-100-legendary-nyan-cat'), alt: 'Легендарний Nyan Cat', scale: 0.82 },
+      { key: 'legendary-capybara', img: meme('meme-100-legendary-capybara'), alt: 'Легендарна капібара', scale: 1.06 },
+    ],
+    phrases: [
+      'Аудитори в шоці. Королева продажів задоволена.',
+      'Міністерство фінансів просить поділитися методикою.',
+      'Нобелівська премія з економіки вже в дорозі.',
+      'Навіть фінансовий директор попросив майстер-клас.',
+      'Black Friday оголосила про банкрутство.',
+    ],
   },
 ];
 
@@ -140,9 +168,18 @@ export const CONFIG = {
     coverFadeOut: 350,      // Pixel Dissolve залишків шару
     /** Скільки триває MATCH FOUND перед екраном нагороди (ТЗ: 1,5–2,5 с). */
     matchHold: 2000,
+    claimGuard: 700,       // мс після CLAIM, коли PLAY AGAIN ще не реагує (захист від подвійного тапу)
     lockedHint: 1600,
     toast: 1800,
     fontsTimeout: 2500,
+    memePreloadDelay: 4000, // фонове завантаження персонажів — після інтро
+    // Секретне розблокування (ТЗ 2.0, розділ 11)
+    secretGlitch: 1100,     // екран «збоїть»: RGB split, зсуви смуг, шум
+    secretErrorHold: 1100,  // SYSTEM ERROR на екрані до другого рядка
+    secretErrorType: 1100,  // UNKNOWN REWARD DETECTED «друкується»
+    secretAssemble: 1100,   // медаль / портал складаються з пікселів
+    secretBadgeHold: 2200,  // пауза на медалі перед порталом
+    portalEnter: 1300,      // портал наближається, екран заповнюють частинки
   },
 
   particles: {
@@ -193,6 +230,15 @@ export const CONFIG = {
       reward33: `${ASSET}audio/reward-33.mp3`,
       reward66: `${ASSET}audio/reward-66.mp3`,
       reward100: `${ASSET}audio/reward-100.mp3`,
+      // Секретна локація — файлів ще немає, запити не виконуються, поки available: false
+      systemGlitch: `${ASSET}audio/system-glitch.mp3`,
+      hiddenAchievement: `${ASSET}audio/hidden-achievement.mp3`,
+      secretPortal: `${ASSET}audio/secret-portal.mp3`,
+      portalTransition: `${ASSET}audio/portal-transition.mp3`,
+      secretRoomAmbient: `${ASSET}audio/secret-room-ambient.mp3`,
+      giftOpening: `${ASSET}audio/gift-opening.mp3`,
+      greetingReveal: `${ASSET}audio/greeting-reveal.mp3`,
+      easterEgg: `${ASSET}audio/easter-egg.mp3`,
     },
   },
 

@@ -75,7 +75,7 @@
   100% { transform: scale(1); filter: brightness(1); }
 }
 
-/* Персонаж після появи ледь помітно «дихає» (не для розбитого серця) */
+/* Персонаж після появи ледь помітно «дихає» (сумний персонаж 0% — ні) */
 .reward__stage.is-idle { animation: meme-idle 2.4s steps(4) infinite; }
 
 @keyframes meme-idle {

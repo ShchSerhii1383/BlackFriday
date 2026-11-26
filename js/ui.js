@@ -145,51 +145,39 @@ export function buildTracker(container, filledSrc) {
 
 /* ---------------- Reward ---------------- */
 
-/** Наповнити екран нагороди даними однієї нагороди з REWARDS. */
-export function renderReward(reward) {
+/**
+ * Наповнити екран нагороди.
+ * @param {object} reward  елемент REWARDS (заголовок, колір, відсоток, кнопка)
+ * @param {{memeIndex: number, phraseIndex: number}} pick  обраний персонаж і фраза
+ *        (обирає game.js один раз на результат — повторний рендер нічого не змінює)
+ */
+export function renderReward(reward, pick) {
+  const meme = reward.memes[pick.memeIndex];
   const scene = $('.scene--reward');
   scene.style.setProperty('--reward', reward.colors.main);
   scene.style.setProperty('--reward-dark', reward.colors.dark);
   scene.style.setProperty('--reward-light', reward.colors.light);
   scene.dataset.reward = reward.key;
+  scene.dataset.meme = meme.key;
 
   $('#reward-title').textContent = reward.title;
   $('#reward-discount').src = reward.discountImg;
   $('#reward-discount').alt = `${reward.value}%`;
-  $('#reward-meme').src = reward.memeImg;
-  $('#reward-meme').alt = reward.memeAlt;
+  $('#reward-meme').src = meme.img;
+  $('#reward-meme').alt = meme.alt;
 
   const stage = $('.reward__stage');
-  stage.style.setProperty('--meme-scale', reward.memeScale ?? 1);
-  stage.classList.toggle('has-platform', Boolean(reward.platform));
-  stage.classList.toggle('has-split', Boolean(reward.split));
+  stage.style.setProperty('--meme-scale', meme.scale ?? 1);
+  stage.classList.toggle('has-platform', Boolean(meme.platform));
   const hasShine = reward.scenario?.accent === 'shine';
   stage.classList.toggle('has-shine', hasShine);
   if (hasShine) {
+    // Маска відблиску — силует саме того персонажа, що зараз на екрані.
     const shine = stage.querySelector('.reward__shine');
-    shine.style.webkitMaskImage = shine.style.maskImage = `url("${reward.memeImg}")`;
+    shine.style.webkitMaskImage = shine.style.maskImage = `url("${meme.img}")`;
   }
-  if (reward.split) {
-    const [left, right] = splitClipPaths(reward.split);
-    for (const half of stage.querySelectorAll('.reward__meme-half')) {
-      half.src = reward.memeImg;
-      half.style.clipPath = half.dataset.half === 'left' ? left : right;
-    }
-  }
-  $('#reward-text').textContent = reward.text;
+  $('#reward-text').textContent = reward.phrases[pick.phraseIndex];
   $('#reward-btn-label').textContent = reward.button;
-}
-
-/**
- * Перетворити лінію розлому [[x%, y%], ...] на два clip-path:
- * ліворуч від лінії і праворуч від неї. Разом вони дають рівно один цілий асет.
- */
-export function splitClipPaths(points) {
-  const line = points.map(([x, y]) => `${x}% ${y}%`);
-  return [
-    `polygon(0% 0%, ${line.join(', ')}, 0% 100%)`,
-    `polygon(100% 0%, ${line.join(', ')}, 100% 100%)`,
-  ];
 }
 
 /* ---------------- Кнопки ---------------- */

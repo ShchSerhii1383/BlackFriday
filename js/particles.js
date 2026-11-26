@@ -9,6 +9,16 @@ import { prefersReducedMotion } from './animations.js';
 
 const P = CONFIG.particles;
 
+/** Піксельне сердечко 7 × 6 (1 — піксель зафарбовано). */
+const HEART = [
+  '0110110',
+  '1111111',
+  '1111111',
+  '0111110',
+  '0011100',
+  '0001000',
+];
+
 export class Particles {
   /**
    * @param {HTMLCanvasElement} canvas  повноекранний шар ефектів
@@ -89,6 +99,43 @@ export class Particles {
     this._trim();
   }
 
+  /** Маленькі піксельні сердечка, що повільно спливають угору (координати #app). */
+  hearts(x, y, colors, count = 10, { spread = 60 } = {}) {
+    if (prefersReducedMotion()) return;
+    for (let i = 0; i < count; i++) {
+      this._push({
+        kind: 'heart',
+        x: x + (Math.random() - 0.5) * spread, y: y + (Math.random() - 0.5) * spread * 0.4,
+        vx: (Math.random() - 0.5) * 50, vy: -40 - Math.random() * 60, g: -20,
+        size: 2 + ((Math.random() * 2) | 0), // розмір одного «пікселя» сердечка
+        color: colors[(Math.random() * colors.length) | 0],
+        life: 1300 + Math.random() * 700, phase: Math.random() * Math.PI * 2,
+      });
+    }
+    this._trim();
+  }
+
+  /**
+   * Частинки злітаються з кола радіусом radius до точки (tx, ty) (координати #app) —
+   * наприклад, коли медаль чи портал «збираються» з пікселів.
+   */
+  converge(tx, ty, colors, count = 40, { radius = 220, life = 900 } = {}) {
+    if (prefersReducedMotion()) return;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = radius * (0.6 + Math.random() * 0.6);
+      this._push({
+        kind: 'seek',
+        sx: tx + Math.cos(a) * r, sy: ty + Math.sin(a) * r,
+        tx: tx + (Math.random() - 0.5) * 40, ty: ty + (Math.random() - 0.5) * 40,
+        x: 0, y: 0, vx: 0, vy: 0, g: 0,
+        size: 2 + ((Math.random() * 4) | 0), color: colors[(Math.random() * colors.length) | 0],
+        life: life * (0.6 + Math.random() * 0.5),
+      });
+    }
+    this._trim();
+  }
+
   /**
    * Додати частинки в точці (координати #app).
    * @param {object} o  count, colors[], speed (px/с), life (мс), size [min,max], gravity (px/с²), spread (px)
@@ -159,14 +206,33 @@ export class Particles {
     for (const p of this.items) {
       p.age += dt * 1000;
       if (p.age >= p.life) continue;
-      p.vx *= 0.985; // невелика інерція
-      p.vy += p.g * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      // Прозорість сходинками — щоб зникання теж було «піксельним».
-      ctx.globalAlpha = Math.ceil((1 - p.age / p.life) * 4) / 4;
+      if (p.kind === 'seek') {
+        // Рух до цілі з уповільненням наприкінці; з'являється і гасне сходинками.
+        const t = p.age / p.life;
+        const k = 1 - (1 - t) ** 3;
+        p.x = p.sx + (p.tx - p.sx) * k;
+        p.y = p.sy + (p.ty - p.sy) * k;
+        ctx.globalAlpha = Math.ceil(Math.min(1, t * 4, (1 - t) * 6) * 4) / 4;
+      } else {
+        p.vx *= 0.985; // невелика інерція
+        p.vy += p.g * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        // Прозорість сходинками — щоб зникання теж було «піксельним».
+        ctx.globalAlpha = Math.ceil((1 - p.age / p.life) * 4) / 4;
+      }
       ctx.fillStyle = p.color;
-      if (p.kind === 'confetti') {
+      if (p.kind === 'heart') {
+        p.x += Math.sin(p.age * 0.005 + p.phase) * 18 * dt; // легке гойдання
+        const c = Math.max(1, Math.round(p.size * dpr));
+        const ox = Math.round(p.x * dpr);
+        const oy = Math.round(p.y * dpr);
+        for (let r = 0; r < HEART.length; r++) {
+          for (let k = 0; k < 7; k++) {
+            if (HEART[r][k] === '1') ctx.fillRect(ox + k * c, oy + r * c, c, c);
+          }
+        }
+      } else if (p.kind === 'confetti') {
         // Гойдання вбік і «перевертання» (висота сходинками стискається і розширюється).
         p.x += Math.sin(p.age * 0.004 + p.phase) * 28 * dt;
         const flip = Math.max(1, Math.round(Math.abs(Math.cos(p.age * 0.008 + p.phase)) * 3)) / 3;
