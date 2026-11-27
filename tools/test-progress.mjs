@@ -57,7 +57,7 @@ for (const [label, raw, expectGames] of [
   ['величезне', { completedGames: 1e12 }, 0],
   ['нормальне', { completedGames: 3 }, 3],
 ]) {
-  fresh({ initial: JSON.stringify({ schema: 1, lastCombos: {}, secretUnlocked: 'true', ...raw }) });
+  fresh({ initial: JSON.stringify({ schema: 2, bags: {}, secretUnlocked: 'true', ...raw }) });
   const p = Storage.getProgress();
   check(p.completedGames === expectGames, `${label}: completedGames=${p.completedGames}`);
   check(p.secretUnlocked === false, `${label}: рядок 'true' не повинен відкривати секрет`);
@@ -66,12 +66,28 @@ fresh({ initial: '{not json' });
 check(Storage.getProgress().completedGames === 0, 'пошкоджений JSON');
 console.log('4) пошкоджені та підроблені значення: безпечні значення за замовчуванням');
 
-/* 5. Дані з Етапу 2 (лише lastCombos) — прогрес з нуля, комбінації збережені */
-fresh({ initial: JSON.stringify({ schema: 1, lastCombos: { r66: { meme: 'stonks', phrase: 2 } } }) });
-check(Storage.getProgress().completedGames === 0 && Storage.getLastCombo('r66')?.meme === 'stonks', 'міграція з Етапу 2');
+/* 5. Дані схеми 1 — прогрес переноситься; скидання прогресу не чіпає мішечки */
+fresh({ initial: JSON.stringify({ schema: 1, lastCombos: { r66: { meme: 'stonks', phrase: 2 } }, completedGames: 3, secretUnlocked: false }) });
+check(Storage.getProgress().completedGames === 3 && Storage.getBag('r66') === null, 'міграція зі схеми 1');
+Storage.setBag('r66', { memes: [1], lastMeme: 0 });
 Storage.recordCompletedGame('a', 5); Storage.resetProgress();
-check(Storage.getProgress().completedGames === 0 && Storage.getLastCombo('r66')?.meme === 'stonks', 'resetProgress зачепив комбінації');
-console.log('5) старі дані Етапу 2 підхоплюються; скидання прогресу не чіпає комбінації нагород');
+check(Storage.getProgress().completedGames === 0 && Storage.getBag('r66')?.lastMeme === 0, 'resetProgress зачепив мішечки');
+console.log('5) дані схеми 1 переносяться; скидання прогресу не чіпає мішечки персонажів');
+
+/* 5б. Повне проходження → наступний вхід з нуля; незавершене — прогрес лишається */
+fresh();
+for (let i = 1; i <= 5; i++) Storage.recordCompletedGame(`j-${i}`, 5);
+Storage.markSecretViewed(); Storage.markGiftOpened(); Storage.setBag('r0', { memes: [2], lastMeme: 1 });
+reload();
+check(Storage.startNewJourneyIfComplete() === false && Storage.getProgress().giftOpened, 'скинуто без дочитаного привітання');
+Storage.markJourneyComplete(); reload();
+check(Storage.startNewJourneyIfComplete() === true, 'повне проходження не скинуло прогрес');
+const pj = Storage.getProgress();
+check(pj.completedGames === 0 && !pj.secretUnlocked && !pj.secretViewed && !pj.giftOpened && !pj.journeyComplete, `після скидання: ${JSON.stringify(pj)}`);
+check(Storage.getBag('r0')?.lastMeme === 1, 'мішечок загубився при скиданні');
+reload();
+check(Storage.startNewJourneyIfComplete() === false, 'повторне скидання');
+console.log('5б) після дочитаного привітання наступний вхід починається з нуля, мішечки зберігаються');
 
 /* 6. localStorage недоступний — гра рахує в пам'яті й не падає */
 fresh({ throwAll: true });

@@ -14,7 +14,7 @@ import { CONFIG, REWARDS, getReward } from './config.js';
 import { AudioManager } from './audio.js';
 import { ScratchCard, CardState } from './scratch.js';
 import { createDeck, shuffle, Round } from './round.js';
-import { pickCombination } from './reward-pick.js';
+import { drawPresentation } from './reward-pick.js';
 import { Storage } from './storage.js';
 import { secretConfig } from './secret-config.js';
 import {
@@ -147,6 +147,7 @@ export class Game {
   }
 
   async _enterIntro(scope) {
+    AudioManager.play('intro'); // браузер дозволить звук лише після дотику — тоді джингл і заграє
     $('#start-logo').classList.remove('is-shining');
     $('#start-crown').hidden = true;
     showScene('start');
@@ -168,7 +169,7 @@ export class Game {
     this.app.classList.add('has-frame');
     $('#start-logo').classList.add('is-shining'); // блиск на логотипі, поки чекаємо гравця
     $('#start-btn').disabled = false;
-    AudioManager.stopRoomAmbient();
+    AudioManager.music('background'); // Wii Shop: стартовий екран і гра (з кімнати — замість Snowdin)
     resetEasterEggs();
     // Корона з'являється лише тоді, коли секретну кімнату вже побачили — до того жодних підказок.
     $('#start-crown').hidden = !Storage.getProgress().secretViewed;
@@ -178,6 +179,7 @@ export class Game {
   }
 
   async _enterGameActive(scope) {
+    AudioManager.music('background'); // після нагороди — назад до музики гри
     this._newRound();
     await wipe(scope, () => showScene('game'));
     // Неонова лінія будує сітку; поки вона малює — поле не приймає дотиків.
@@ -260,6 +262,7 @@ export class Game {
   async _enterSecretUnlock(scope) {
     preloadSecretAssets();
     const from = document.querySelector('.scene.is-active:not(.scene--secret)') || $('.scene--start');
+    AudioManager.music(null); // музика нагороди стихає — звучить лише глітч і фанфара
     AudioManager.play('glitch');
     await playGlitch(scope, { app: this.app, scene: $('.scene--secret'), from });
     this.transition(State.SECRET_ACHIEVEMENT);
@@ -334,7 +337,12 @@ export class Game {
   /** Панель привітання. OK — назад у кімнату (подарунок лишається відкритим). */
   async _enterGreeting(scope) {
     $('#gift-btn').disabled = true;
-    await playGreeting(scope, { onClose: () => this.transition(State.SECRET_ROOM) });
+    await playGreeting(scope, {
+      onClose: () => {
+        Storage.markJourneyComplete(); // наступний вхід у гру почнеться з нуля
+        this.transition(State.SECRET_ROOM);
+      },
+    });
   }
 
   /**
@@ -350,12 +358,8 @@ export class Game {
       this.debugPick = null;
       return pick;
     }
-    const saved = Storage.getLastCombo(reward.key);
-    const last = saved
-      ? { memeIndex: reward.memes.findIndex((m) => m.key === saved.meme), phraseIndex: saved.phrase }
-      : null;
-    const pick = pickCombination(reward.memes.length, reward.phrases.length, last);
-    Storage.setLastCombo(reward.key, { meme: reward.memes[pick.memeIndex].key, phrase: pick.phraseIndex });
+    const { pick, bag } = drawPresentation(Storage.getBag(reward.key), reward.memes.length, reward.phrases.length);
+    Storage.setBag(reward.key, bag);
     return pick;
   }
 

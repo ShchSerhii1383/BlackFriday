@@ -1,66 +1,63 @@
 /**
- * Перевірка вибору персонажа/фрази (Anti-Repeat) і безпечного сховища.
+ * Перевірка вибору персонажа/фрази («мішечок») і безпечного сховища.
  * Запуск із кореня проєкту:  node tools/test-reward-pick.mjs
  */
-import { pickCombination } from '../js/reward-pick.js';
+import { drawPresentation, drawFromBag } from '../js/reward-pick.js';
 
 let failures = 0;
 const fail = (msg) => { if (failures++ < 8) console.error('FAIL:', msg); };
-const key = (p) => `${p.memeIndex}:${p.phraseIndex}`;
 
-/* ---------- 1. Anti-Repeat і рівномірність: 3 персонажі × 5 фраз ---------- */
-const RUNS = 150_000;
-const combos = new Map();
-const memes = [0, 0, 0];
-const phrases = [0, 0, 0, 0, 0];
-let last = null;
+/* ---------- 1. Повні кола: 4 персонажі × 5 фраз, без повторів поспіль ---------- */
+const M = 4, P = 5, RUNS = 120_000;
+let bag = null;
+const memeSeq = [], phraseSeq = [];
+const memeCount = new Array(M).fill(0), phraseCount = new Array(P).fill(0);
+const firstOfCycle = new Array(M).fill(0);
 for (let i = 0; i < RUNS; i++) {
-  const p = pickCombination(3, 5, last);
-  if (p.memeIndex < 0 || p.memeIndex > 2 || p.phraseIndex < 0 || p.phraseIndex > 4) fail(`поза межами ${key(p)}`);
-  if (last && key(p) === key(last)) fail(`повтор останньої комбінації ${key(p)} на кроці ${i}`);
-  combos.set(key(p), (combos.get(key(p)) || 0) + 1);
-  memes[p.memeIndex]++;
-  phrases[p.phraseIndex]++;
-  last = p;
+  const r = drawPresentation(bag, M, P);
+  bag = JSON.parse(JSON.stringify(r.bag)); // як після запису в localStorage
+  const { memeIndex: m, phraseIndex: ph } = r.pick;
+  if (m < 0 || m >= M || ph < 0 || ph >= P) fail(`поза межами ${m}:${ph}`);
+  memeSeq.push(m); phraseSeq.push(ph); memeCount[m]++; phraseCount[ph]++;
+  if (i % M === 0) firstOfCycle[m]++;
 }
-if (combos.size !== 15) fail(`досяжно ${combos.size} комбінацій замість 15`);
-const share = (n) => n / RUNS;
-const worstCombo = Math.max(...[...combos.values()].map((n) => Math.abs(share(n) - 1 / 15)));
-const worstMeme = Math.max(...memes.map((n) => Math.abs(share(n) - 1 / 3)));
-const worstPhrase = Math.max(...phrases.map((n) => Math.abs(share(n) - 1 / 5)));
-console.log(`комбінацій: ${combos.size}/15, повторів поспіль: 0 перевірено на ${RUNS}`);
-console.log(`відхилення: комбінація ${(worstCombo * 100).toFixed(2)} п.п. (від 6,67%), персонаж ${(worstMeme * 100).toFixed(2)} п.п. (від 33,3%), фраза ${(worstPhrase * 100).toFixed(2)} п.п. (від 20%)`);
-if (worstCombo > 0.005 || worstMeme > 0.01 || worstPhrase > 0.01) fail('нерівномірний розподіл');
-
-/* ---------- 2. Окремо персонаж і фраза МОЖУТЬ повторюватися ---------- */
-let sameMeme = 0, samePhrase = 0;
-last = null;
-for (let i = 0; i < 10_000; i++) {
-  const p = pickCombination(3, 5, last);
-  if (last && p.memeIndex === last.memeIndex) sameMeme++;
-  if (last && p.phraseIndex === last.phraseIndex) samePhrase++;
-  last = p;
-}
-if (!sameMeme || !samePhrase) fail('персонаж або фраза ніколи не повторюються окремо');
-console.log(`той самий персонаж поспіль: ${(sameMeme / 100).toFixed(1)}%, та сама фраза: ${(samePhrase / 100).toFixed(1)}% — дозволено`);
-
-/* ---------- 3. Некоректна «остання» комбінація не ламає вибір ---------- */
-for (const bad of [null, undefined, {}, { memeIndex: -1, phraseIndex: 0 }, { memeIndex: 9, phraseIndex: 1 },
-  { memeIndex: 1.5, phraseIndex: 2 }, { memeIndex: '1', phraseIndex: '2' }, 'garbage', 42]) {
-  for (let i = 0; i < 200; i++) {
-    const p = pickCombination(3, 5, bad);
-    if (!(p.memeIndex >= 0 && p.memeIndex < 3 && p.phraseIndex >= 0 && p.phraseIndex < 5)) fail(`некоректний вибір для ${JSON.stringify(bad)}`);
+const fullCycles = (seq, n) => {
+  for (let c = 0; c + n <= seq.length; c += n) {
+    if (new Set(seq.slice(c, c + n)).size !== n) return `коло з ${c}: ${seq.slice(c, c + n)}`;
   }
+  return null;
+};
+const repeats = (seq) => seq.reduce((k, v, i) => k + (i && v === seq[i - 1] ? 1 : 0), 0);
+const e1 = fullCycles(memeSeq, M); if (e1) fail(`персонажі: неповне ${e1}`);
+const e2 = fullCycles(phraseSeq, P); if (e2) fail(`фрази: неповне ${e2}`);
+if (repeats(memeSeq)) fail(`персонаж повторився поспіль ${repeats(memeSeq)} разів`);
+if (repeats(phraseSeq)) fail(`фраза повторилась поспіль ${repeats(phraseSeq)} разів`);
+const worst = (arr, n) => Math.max(...arr.map((c) => Math.abs(c / RUNS - 1 / n)));
+if (worst(memeCount, M) > 0.001 || worst(phraseCount, P) > 0.001) fail('нерівномірний розподіл');
+// порядок усередині кола випадковий: кожен персонаж приблизно однаково часто відкриває коло
+const cycles = RUNS / M;
+if (Math.max(...firstOfCycle.map((c) => Math.abs(c / cycles - 1 / M))) > 0.01) fail(`порядок не випадковий: ${firstOfCycle}`);
+const combos = new Set(memeSeq.map((m, i) => `${m}:${phraseSeq[i]}`));
+if (combos.size !== M * P) fail(`досяжно ${combos.size} комбінацій замість ${M * P}`);
+console.log(`кола: кожні ${M} персонажів і ${P} фраз — усі різні; повторів поспіль 0; комбінацій ${combos.size}/${M * P} (${RUNS} результатів)`);
+
+/* ---------- 2. Пошкоджений або застарілий стан мішечка ---------- */
+for (const [label, b] of [
+  ['null', null], ['рядок', 'oops'], ['масив', [1, 2]],
+  ['чужі елементи', { memeCount: 4, phraseCount: 5, memes: [9, -1, 'a', 2, 2], phrases: 'x', lastMeme: 'z' }],
+  ['змінилась кількість персонажів (було 3)', { memeCount: 3, phraseCount: 5, memes: [2], phrases: [4], lastMeme: 0, lastPhrase: 1 }],
+]) {
+  try {
+    const r = drawPresentation(b, M, P);
+    if (!(r.pick.memeIndex >= 0 && r.pick.memeIndex < M && r.pick.phraseIndex >= 0 && r.pick.phraseIndex < P)) fail(`${label}: поза межами`);
+  } catch (e) { fail(`${label}: виняток ${e.message}`); }
 }
-// Межові значення генератора: rng → 0 і rng → 0.9999 при виключеній першій/останній комбінації
-for (const rng of [() => 0, () => 0.99999]) {
-  for (const l of [{ memeIndex: 0, phraseIndex: 0 }, { memeIndex: 2, phraseIndex: 4 }]) {
-    const p = pickCombination(3, 5, l, rng);
-    if (key(p) === key(l) || p.memeIndex > 2 || p.phraseIndex > 4) fail(`межовий випадок rng/last ${key(l)} → ${key(p)}`);
-  }
-}
-if (key(pickCombination(1, 1, { memeIndex: 0, phraseIndex: 0 })) !== '0:0') fail('єдина комбінація має лишатися доступною');
-console.log('некоректні дані та межові випадки: OK');
+// у «чужих елементах» лишається лише валідний індекс 2 — він і має вийти першим
+if (drawPresentation({ memeCount: 4, phraseCount: 5, memes: [9, 2, 2] }, M, P).pick.memeIndex !== 2) fail('валідний залишок черги загубився');
+// Нове коло не починається з останнього показаного
+for (let t = 0; t < 2000; t++) if (drawFromBag([], 4, 3).index === 3) { fail('нове коло почалось з останнього'); break; }
+if (drawFromBag(null, 1, 0).index !== 0) fail('єдиний елемент має лишатися доступним');
+console.log('пошкоджені/застарілі мішечки: без винятків; нове коло не починається з останнього');
 
 /* ---------- 4. Сховище: пошкоджені дані, недоступний і переповнений localStorage ---------- */
 function fakeStorage({ throwOnGet = false, throwOnSet = false, initial = null } = {}) {
@@ -77,7 +74,7 @@ const cases = [
   ['пошкоджений JSON', fakeStorage({ initial: '{oops' })],
   ['чужий формат', fakeStorage({ initial: '[1,2,3]' })],
   ['стара схема', fakeStorage({ initial: '{"schema":0,"lastCombos":{"r0":{"meme":"x","phrase":1}}}' })],
-  ['lastCombos не обʼєкт', fakeStorage({ initial: '{"schema":1,"lastCombos":"bad"}' })],
+  ['bags не обʼєкт', fakeStorage({ initial: '{"schema":2,"bags":"bad"}' })],
   ['читання заборонено', fakeStorage({ throwOnGet: true, throwOnSet: true })],
   ['сховище переповнене', fakeStorage({ throwOnSet: true })],
 ];
@@ -85,10 +82,10 @@ for (const [name, store] of cases) {
   globalThis.localStorage = store;
   Storage._reload();
   try {
-    if (Storage.getLastCombo('r0') !== null) fail(`${name}: очікувалось порожнє значення`);
-    Storage.setLastCombo('r0', { meme: 'crying-cat', phrase: 3 });
-    const got = Storage.getLastCombo('r0');
-    if (!got || got.meme !== 'crying-cat') fail(`${name}: у межах сесії значення має зберігатися в пам'яті`);
+    if (Storage.getBag('r0') !== null) fail(`${name}: очікувалось порожнє значення`);
+    Storage.setBag('r0', { memes: [1, 2], lastMeme: 3 });
+    const got = Storage.getBag('r0');
+    if (!got || got.lastMeme !== 3) fail(`${name}: у межах сесії значення має зберігатися в пам'яті`);
   } catch (e) {
     fail(`${name}: виняток ${e.message}`);
   }
@@ -97,13 +94,13 @@ for (const [name, store] of cases) {
 const good = fakeStorage();
 globalThis.localStorage = good;
 Storage._reload();
-Storage.setLastCombo('r66', { meme: 'financial-rat', phrase: 4 });
+Storage.setBag('r66', { memes: [0, 3], lastMeme: 1 });
 Storage._reload();
-const back = Storage.getLastCombo('r66');
-if (!back || back.meme !== 'financial-rat' || back.phrase !== 4) fail('дані не пережили перезавантаження');
+const back = Storage.getBag('r66');
+if (!back || back.lastMeme !== 1 || back.memes.join() !== '0,3') fail('дані не пережили перезавантаження');
 delete globalThis.localStorage;
 Storage._reload();
-try { Storage.setLastCombo('r0', { meme: 'a', phrase: 0 }); } catch (e) { fail(`без localStorage взагалі: ${e.message}`); }
+try { Storage.setBag('r0', { memes: [] }); } catch (e) { fail(`без localStorage взагалі: ${e.message}`); }
 console.log('сховище: пошкоджені/недоступні/переповнені дані — без винятків; збереження між перезавантаженнями — OK');
 
 console.log(failures ? `ПОМИЛОК: ${failures}` : 'OK — усі перевірки пройдено');

@@ -14,7 +14,7 @@ const meme = (file) => `${ASSET}memes/${file}.webp`;
  * Чотири нагороди описані ОДНІЄЮ структурою.
  * Ігрова логіка працює лише з цим масивом і не знає про конкретні значення.
  *
- * memes   — 3 персонажі знижки. На кожен результат обирається один персонаж
+ * memes   — 4 персонажі знижки. На кожен результат обирається один персонаж
  *           і одна фраза — незалежно одне від одного (3 × 5 = 15 комбінацій).
  *   scale    візуальне вирівнювання: асети мають різні пропорції (Nyan Cat широкий,
  *            єдиноріг високий), тож однакова висота робила б їх різними «на око».
@@ -46,6 +46,7 @@ export const REWARDS = [
       { key: 'bankrupt-raccoon', img: meme('meme-0-bankrupt-raccoon'), alt: 'Єнот-банкрут', scale: 1.02 },
       { key: 'crying-cat', img: meme('meme-0-crying-cat'), alt: 'Кіт, що плаче', scale: 1.08 },
       { key: 'crying-pepe', img: meme('meme-0-crying-pepe'), alt: 'Пепе, що плаче', scale: 1.06 },
+      { key: 'grumpy-cat', img: meme('meme-0-grumpy-cat'), alt: 'Сумний кіт із порожнім гаманцем', scale: 0.97 },
     ],
     phrases: [
       'Бюджет погоджено. Фінансування відсутнє.',
@@ -68,6 +69,7 @@ export const REWARDS = [
       { key: 'shopping-bear', img: meme('meme-33-shopping-bear'), alt: 'Ведмедик із покупками', scale: 1 },
       { key: 'shopping-doge', img: meme('meme-33-shopping-doge'), alt: 'Доге з покупками', scale: 1 },
       { key: 'shopping-hamster', img: meme('meme-33-shopping-hamster'), alt: "Хом'як із покупками", scale: 1 },
+      { key: 'shopping-snail', img: meme('meme-33-shopping-snail'), alt: 'Равлик із покупками', scale: 0.94 },
     ],
     phrases: [
       'Заощадила 33%, щоб витратити ще більше.',
@@ -90,6 +92,7 @@ export const REWARDS = [
       { key: 'financial-rat', img: meme('meme-66-financial-rat'), alt: 'Щур-фінансист', scale: 1.01 },
       { key: 'stonks', img: meme('meme-66-stonks'), alt: 'Stonks', scale: 0.99 },
       { key: 'financial-monkey', img: meme('meme-66-financial-monkey'), alt: 'Мавпа-фінансист', scale: 0.99 },
+      { key: 'rich-seal', img: meme('meme-66-rich-seal'), alt: 'Тюлень на грошах', scale: 0.74 },
     ],
     phrases: [
       'Витрати перекласифіковано в інвестиції у власне щастя.',
@@ -113,6 +116,7 @@ export const REWARDS = [
       { key: 'legendary-unicorn', img: meme('meme-100-legendary-unicorn'), alt: 'Легендарний єдиноріг', scale: 1.12, platform: true },
       { key: 'legendary-nyan-cat', img: meme('meme-100-legendary-nyan-cat'), alt: 'Легендарний Nyan Cat', scale: 0.82 },
       { key: 'legendary-capybara', img: meme('meme-100-legendary-capybara'), alt: 'Легендарна капібара', scale: 1.06 },
+      { key: 'legendary-yorkie', img: meme('meme-100-legendary-yorkie'), alt: 'Легендарний йорк у кроксі', scale: 1.12 },
     ],
     phrases: [
       'Аудитори в шоці. Королева продажів задоволена.',
@@ -195,7 +199,6 @@ export const CONFIG = {
     startHint: 'Знайди три однакові знижки',
     gameHint: 'Стирай картки пальцем',
     lockedHint: 'Спершу дотри цю картку',
-    soundSoon: 'SOUND COMING SOON',
     startButton: 'START GAME',
     playAgain: 'PLAY AGAIN',
     matchFound: 'MATCH FOUND',
@@ -214,31 +217,30 @@ export const CONFIG = {
     soundOff: `${ASSET}ui/sound-off.webp`,
   },
 
+  /**
+   * Звук (фінальна музична режисура). Джерела — _source/audio/, готові файли — assets/audio/
+   * (моно 96 kbps, гучність вирівняна). Нічого не вантажиться до першого дотику.
+   */
   audio: {
-    available: false,
-    enabledByDefault: false,
-    musicVolume: 0.3,
-    effectsVolume: 0.6,
+    available: true,
+    enabledByDefault: true,
+    musicVolume: 0.55,
+    effectsVolume: 0.7,
     files: {
-      intro: `${ASSET}audio/intro.mp3`,
-      background: `${ASSET}audio/background.mp3`,
-      buttonClick: `${ASSET}audio/button-click.mp3`,
-      scratch: `${ASSET}audio/scratch.mp3`,
-      cardReveal: `${ASSET}audio/card-reveal.mp3`,
-      matchFound: `${ASSET}audio/match-found.mp3`,
-      reward0: `${ASSET}audio/reward-0.mp3`,
-      reward33: `${ASSET}audio/reward-33.mp3`,
-      reward66: `${ASSET}audio/reward-66.mp3`,
-      reward100: `${ASSET}audio/reward-100.mp3`,
-      // Секретна локація — файлів ще немає, запити не виконуються, поки available: false
-      systemGlitch: `${ASSET}audio/system-glitch.mp3`,
-      hiddenAchievement: `${ASSET}audio/hidden-achievement.mp3`,
-      secretPortal: `${ASSET}audio/secret-portal.mp3`,
-      portalTransition: `${ASSET}audio/portal-transition.mp3`,
-      secretRoomAmbient: `${ASSET}audio/secret-room-ambient.mp3`,
-      giftOpening: `${ASSET}audio/gift-opening.mp3`,
-      greetingReveal: `${ASSET}audio/greeting-reveal.mp3`,
-      easterEgg: `${ASSET}audio/easter-egg.mp3`,
+      // музика (по колу)
+      background: `${ASSET}audio/background.mp3`,            // гра — Wii Shop Channel (8-bit)
+      reward0: `${ASSET}audio/reward-0.mp3`,                 // 0% — Curb Your Enthusiasm
+      reward33: `${ASSET}audio/reward-33.mp3`,               // 33% — Mii Channel Theme
+      reward66: `${ASSET}audio/reward-66.mp3`,               // 66% — Money, Money, Money (8-bit з MIDI)
+      reward100: `${ASSET}audio/reward-100.mp3`,             // 100% — The Final Countdown (8-bit)
+      secretRoomAmbient: `${ASSET}audio/secret-room-ambient.mp3`, // кімната — Snowdin Town
+      greetingMusic: `${ASSET}audio/greeting-music.mp3`,     // подарунок і привітання — Home (Undertale)
+      // короткі ефекти
+      intro: `${ASSET}audio/intro.mp3`,                      // інтро — 8-bit Arcade Startup
+      buttonClick: `${ASSET}audio/button-click.mp3`,         // кнопки — Button Effect 1
+      scratch: `${ASSET}audio/scratch.mp3`,                  // стирання — 8-bit Scratch
+      systemGlitch: `${ASSET}audio/system-glitch.mp3`,       // розблокування — Glitch + Zelda Secret Fanfare
+      secretPortal: `${ASSET}audio/secret-portal.mp3`,       // портал — Magical Chime + Portal Sound
     },
   },
 

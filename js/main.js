@@ -52,15 +52,19 @@ function preloadMemes() {
     CONFIG.timing.memePreloadDelay);
 }
 
-/** Кнопка звуку: поки аудіо недоступне — лише чесне повідомлення. */
+/** Кнопка звуку: вмикає/вимикає все; вибір запам'ятовується (audio.js). */
 function bindSoundButton() {
   const btn = $('#sound-btn');
-  btn.addEventListener('click', () => {
-    const on = AudioManager.toggle();
-    if (!CONFIG.audio.available) toast(CONFIG.text.soundSoon);
+  const render = (on) => {
     btn.querySelector('img').src = on ? CONFIG.assets.soundOn : CONFIG.assets.soundOff;
     btn.setAttribute('aria-pressed', String(on));
     btn.setAttribute('aria-label', on ? 'Звук увімкнено' : 'Звук вимкнено');
+  };
+  render(AudioManager.enabled);
+  btn.addEventListener('click', () => {
+    const on = AudioManager.toggle();
+    if (on) AudioManager.play('click');
+    render(on);
   });
 }
 
@@ -70,6 +74,8 @@ async function boot() {
 
   const deps = await preload();
   const particles = new Particles($('#fx-layer'), $('#app'));
+  // Минулого разу гру пройдено до кінця привітання → цей вхід починається з нуля.
+  Storage.startNewJourneyIfComplete();
   const game = new Game({ ...deps, particles });
   bindSoundButton();
   bindArcadeButtons();

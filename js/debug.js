@@ -99,7 +99,7 @@ export function initDebug(game) {
     game.cards.forEach((c) => (c.el.dataset.value = c.value));
     const pr = Storage.getProgress();
     progressOut.textContent = `games ${pr.completedGames} | unlocked ${pr.secretUnlocked} | viewed ${pr.secretViewed}` +
-      ` | gift ${pr.giftOpened} | ${Storage.isPersistent() ? 'localStorage' : 'memory only'}`;
+      ` | gift ${pr.giftOpened} | done ${pr.journeyComplete} | ${Storage.isPersistent() ? 'localStorage' : 'memory only'}`;
   };
   game.onChange = report;
 

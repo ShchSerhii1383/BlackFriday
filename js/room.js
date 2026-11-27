@@ -439,8 +439,8 @@ export async function playGreeting(scope, { onClose }) {
     scope.onDispose(() => el.removeEventListener(type, fn));
   };
   listen(panel, 'click', () => skip?.());
-  listen(nextBtn, 'click', () => { if (!nextBtn.hidden) showPage(pageIndex + 1); });
-  listen(closeBtn, 'click', () => { if (!closeBtn.hidden) onClose(); });
+  listen(nextBtn, 'click', () => { if (!nextBtn.hidden) { AudioManager.play('click'); showPage(pageIndex + 1); } });
+  listen(closeBtn, 'click', () => { if (!closeBtn.hidden) { AudioManager.play('click'); onClose(); } });
 
   function showPage(i) {
     pageIndex = i;

@@ -9,6 +9,7 @@
  * Порядок і переходи між сценами вирішує game.js (state machine).
  */
 import { CONFIG } from './config.js';
+import { secretConfig } from './secret-config.js';
 import { prefersReducedMotion, relRect } from './animations.js';
 import { showScene } from './ui.js';
 
@@ -33,6 +34,8 @@ export function preloadSecretAssets() {
   document.querySelectorAll('img[data-src]').forEach((img) => {
     if (!img.getAttribute('src')) img.src = img.dataset.src;
   });
+  // Фото в рамці теж наперед, щоб у кімнаті воно з'явилося одразу, а не з затримкою.
+  if (secretConfig.photo.enabled) new Image().src = secretConfig.photo.src;
 }
 
 /** Дочекатися, поки зображення готове до малювання (не довше за timeout). */

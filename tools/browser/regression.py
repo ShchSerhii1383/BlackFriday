@@ -97,7 +97,12 @@ async def main():
         await play_until_match(page); await page.wait_for_function(READY_REWARD, timeout=10000)
         await page.click("#reward-btn"); await page.wait_for_timeout(400)
         check("1.11 6-та гра: CLAIM не запускає секрет вдруге", await page.evaluate(GA) == "REWARD")
-        check("1.12 жодних помилок і 404", not errs, errs[:3])
+        await page.reload(); await page.wait_for_function(GA + "==='START'", timeout=10000); await page.wait_for_timeout(500)
+        check("1.12 новий вхід після повного проходження → прогрес з нуля, корони немає",
+              (await page.evaluate(PROGRESS)) == [0, False, False, False] and not await page.locator("#start-crown").is_visible(), await page.evaluate(PROGRESS))
+        bags = await page.evaluate("() => Object.keys(JSON.parse(localStorage.getItem('bf-arcade')).bags || {}).length")
+        check("1.13 мішечки персонажів після скидання збереглися", bags >= 1, bags)
+        check("1.14 жодних помилок і 404", not errs, errs[:3])
         await ctx.close()
 
         # ---------- 2. Перезавантаження в кожній точці секрету ----------

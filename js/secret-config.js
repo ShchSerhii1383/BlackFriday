@@ -10,15 +10,14 @@ export const secretConfig = {
 
   photo: {
     /**
-     * Справжнє фото: покладіть файл у assets/secret/secret-photo.jpg і змініть
-     * enabled на true. Поки false — показується заглушка і запит до
-     * відсутнього файлу НЕ виконується.
+     * Справжнє фото (кадр 284:412, ~600×870 px, WebP без EXIF).
+     * enabled: false — показується заглушка і запит до фото НЕ виконується.
      */
-    enabled: false,
-    src: 'assets/secret/secret-photo.jpg',
+    enabled: true,
+    src: 'assets/secret/secret-photo.webp',
     placeholder: 'assets/secret/photo-placeholder.svg',
     /** Яку частину фото тримати в кадрі (CSS object-position), напр. '50% 30%' — вище обличчя. */
-    position: '50% 35%',
+    position: '50% 35%', // кадр уже точно під рамку, тож майже не впливає
   },
 
   /**

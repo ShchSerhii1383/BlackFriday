@@ -14,12 +14,12 @@
  */
 
 const KEY = 'bf-arcade';
-const SCHEMA = 1;
+const SCHEMA = 2; // 2: мішечки персонажів/фраз замість «останньої комбінації»
 
 const defaults = () => ({
   schema: SCHEMA,
-  /** Остання комбінація кожної знижки: { r66: { meme: 'financial-rat', phrase: 4 } } */
-  lastCombos: {},
+  /** Мішечки кожної знижки (див. reward-pick.js): { r66: { memes: [2, 0], phrases: [...], lastMeme: 1, ... } } */
+  bags: {},
   /** Скільки ігор завершено (зараховується в момент третьої однакової картки). */
   completedGames: 0,
   /** ID останнього зарахованого раунду — захист від повторного зарахування. */
@@ -30,6 +30,8 @@ const defaults = () => ({
   secretViewed: false,
   /** Подарунок у секретній кімнаті вже відкривали. */
   giftOpened: false,
+  /** Привітання дочитано до кінця — на наступному вході прогрес почнеться заново. */
+  journeyComplete: false,
 });
 
 /** Привести збережені поля прогресу до коректних типів (пошкоджені → за замовчуванням). */
@@ -41,6 +43,7 @@ function sanitizeProgress(d) {
     secretUnlocked: d.secretUnlocked === true,
     secretViewed: d.secretViewed === true,
     giftOpened: d.giftOpened === true,
+    journeyComplete: d.journeyComplete === true,
   };
 }
 
@@ -73,14 +76,16 @@ function load() {
     data = null; // пошкоджений JSON
   }
   const base = defaults();
-  if (!data || typeof data !== 'object' || data.schema !== SCHEMA) {
+  if (!data || typeof data !== 'object' || (data.schema !== SCHEMA && data.schema !== 1)) {
     cache = base;
   } else {
+    // Схема 1 (до мішечків): прогрес переноситься, мішечки починаються з нуля.
     cache = {
       ...base,
-      lastCombos: isPlainObject(data.lastCombos) ? data.lastCombos : {},
+      bags: data.schema === SCHEMA && isPlainObject(data.bags) ? data.bags : {},
       ...sanitizeProgress(data),
     };
+    if (data.schema !== SCHEMA) save();
   }
   return cache;
 }
@@ -94,14 +99,14 @@ function save() {
 }
 
 export const Storage = {
-  /** Остання комбінація знижки або null. Формат перевіряє той, хто читає. */
-  getLastCombo(rewardKey) {
-    const c = load().lastCombos[rewardKey];
-    return isPlainObject(c) ? c : null;
+  /** Стан мішечків знижки або null. Вміст перевіряє reward-pick.js. */
+  getBag(rewardKey) {
+    const b = load().bags[rewardKey];
+    return isPlainObject(b) ? b : null;
   },
 
-  setLastCombo(rewardKey, combo) {
-    load().lastCombos[rewardKey] = combo;
+  setBag(rewardKey, bag) {
+    load().bags[rewardKey] = bag;
     save();
   },
 
@@ -143,6 +148,23 @@ export const Storage = {
     save();
   },
 
+  /** Привітання дочитано — повне проходження завершено. */
+  markJourneyComplete() {
+    load().journeyComplete = true;
+    save();
+  },
+
+  /**
+   * Викликається один раз при відкритті гри: якщо минулого разу пройдено все
+   * до кінця привітання, прогрес починається заново (мішечки лишаються — коло триває).
+   * @returns {boolean} чи було скинуто прогрес
+   */
+  startNewJourneyIfComplete() {
+    if (!load().journeyComplete) return false;
+    this.resetProgress();
+    return true;
+  },
+
   /** Debug: виставити кількість завершених ігор (секрет перераховується від порогу). */
   debugSetCompletedGames(n, unlockAfter) {
     const d = load();
@@ -151,6 +173,7 @@ export const Storage = {
     d.secretUnlocked = d.completedGames >= unlockAfter;
     d.secretViewed = false;
     d.giftOpened = false;
+    d.journeyComplete = false;
     save();
   },
 
@@ -160,7 +183,7 @@ export const Storage = {
     save();
   },
 
-  /** Debug: скинути лише прогрес (останні комбінації нагород лишаються). */
+  /** Скинути лише прогрес (мішечки персонажів і фраз лишаються). */
   resetProgress() {
     Object.assign(load(), sanitizeProgress({}));
     save();
