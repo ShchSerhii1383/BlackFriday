@@ -17,10 +17,10 @@
 
   <!-- ?v=… — мітка версії: після оновлення файлів змініть її, щоб Safari і GitHub Pages
        не показували старі CSS/JS з кешу -->
-  <link rel="stylesheet" href="css/style.css?v=2026-11-27c">
-  <link rel="stylesheet" href="css/animations.css?v=2026-11-27c">
-  <link rel="stylesheet" href="css/responsive.css?v=2026-11-27c">
-  <link rel="stylesheet" href="css/secret.css?v=2026-11-27c">
+  <link rel="stylesheet" href="css/style.css?v=2026-11-27e">
+  <link rel="stylesheet" href="css/animations.css?v=2026-11-27e">
+  <link rel="stylesheet" href="css/responsive.css?v=2026-11-27e">
+  <link rel="stylesheet" href="css/secret.css?v=2026-11-27e">
 </head>
 <body>
   <div id="app" class="app" data-state="loading">
@@ -182,9 +182,13 @@
         <div class="room__layer room__greeting" id="room-greeting">
           <div class="greeting" id="greeting" hidden>
             <div class="greeting__panel" id="greeting-panel" role="dialog" aria-label="Привітання">
+              <p class="greeting__kicker"><i class="px-sparkle"></i><span id="greeting-kicker"></span><i class="px-sparkle"></i></p>
               <h2 class="greeting__title" id="greeting-title"></h2>
               <div class="greeting__body" id="greeting-body"></div>
-              <p class="greeting__signature" id="greeting-signature"></p>
+              <div class="greeting__signature" id="greeting-signature">
+                <p class="greeting__queen"><i class="px-star"></i><span id="greeting-queen"></span><i class="px-star"></i></p>
+                <p class="greeting__achievement" id="greeting-achievement"></p>
+              </div>
             </div>
             <div class="greeting__nav">
               <button class="greeting__btn" id="greeting-next" type="button">NEXT &gt;</button>
@@ -212,6 +216,6 @@
   </div>
 
   <noscript><p class="noscript">Для гри потрібен JavaScript.</p></noscript>
-  <script type="module" src="js/main.js?v=2026-11-27c"></script>
+  <script type="module" src="js/main.js?v=2026-11-27e"></script>
 </body>
 </html>

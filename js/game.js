@@ -338,6 +338,8 @@ export class Game {
   async _enterGreeting(scope) {
     $('#gift-btn').disabled = true;
     await playGreeting(scope, {
+      app: this.app,
+      particles: this.particles,
       onClose: () => {
         Storage.markJourneyComplete(); // наступний вхід у гру почнеться з нуля
         this.transition(State.SECRET_ROOM);
@@ -559,6 +561,7 @@ export class Game {
    */
   debugSecret(step) {
     if (!CONFIG.debug) return;
+    preloadSecretAssets(); // кнопки панелі можуть вести одразу в лист, оминаючи кімнату
     if (step === 'gift-closed') Storage.debugSetGiftOpened(false);
     if (step === 'gift-open' || step === 'greeting') Storage.debugSetGiftOpened(true);
     const to = { glitch: State.SECRET_UNLOCK, achievement: State.SECRET_ACHIEVEMENT, portal: State.SECRET_PORTAL,

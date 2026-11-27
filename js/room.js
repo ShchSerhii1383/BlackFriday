@@ -322,30 +322,67 @@ export async function playGiftOpening(scope, { app, particles, onOpened }) {
 
 const CHARS_PER_SECOND = 45;
 
-/** Абзац із конфігу → DOM: текст і піксельний смайл замість {smile}. */
+/** Мітки в тексті листа (див. secret-config.js). Кожна «друкується» як один символ. */
+const TOKENS = ['{chart}', '{discount}', '{smile}'];
+const TOKEN_RE = /(\{chart\}|\{discount\}|\{smile\})/;
+
+/** Абзац із конфігу → частини: текст і мітки. */
 function paragraphParts(text) {
-  return text.split(/(\{smile\})/).filter(Boolean);
+  return text.split(TOKEN_RE).filter(Boolean);
 }
 
-/**
- * Показати перші chars символів абзацу. Решта тексту теж є в DOM, але невидима —
- * тож розмір панелі не змінюється під час друку (без «стрибків» рядків).
- */
-function renderParagraph(p, text, chars = Infinity) {
-  p.replaceChildren();
-  const pending = document.createElement('span');
-  pending.className = 'greeting__pending';
-  let left = chars;
-  const smile = () => {
+/** Абзац складається лише з однієї мітки-блоку ({chart} або {discount}). */
+const blockToken = (text) => (text === '{chart}' || text === '{discount}' ? text : null);
+
+/** DOM-елемент мітки. Розмір фіксований, тож поява не зсуває рядки. */
+function tokenElement(token) {
+  if (token === '{smile}') {
     const el = document.createElement('span');
     el.className = 'px-smile';
     el.setAttribute('role', 'img');
     el.setAttribute('aria-label', 'усмішка');
     return el;
-  };
+  }
+  if (token === '{chart}') {
+    // Піксельний графік: стовпчики ростуть по черзі, остання точка — стрілка вгору
+    const el = document.createElement('span');
+    el.className = 'gr-chart';
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', 'графік щастя йде вгору');
+    for (let i = 0; i < 6; i++) {
+      const bar = document.createElement('b');
+      bar.style.setProperty('--i', i);
+      el.append(bar);
+    }
+    el.append(Object.assign(document.createElement('i'), { className: 'gr-chart__arrow' }));
+    return el;
+  }
+  // {discount}: окремі символи, щоб цифри мерехтіли кожна у своєму ритмі
+  const el = document.createElement('span');
+  el.className = 'gr-discount';
+  el.setAttribute('aria-label', 'знижка 100%');
+  [...'100%'].forEach((ch, i) => {
+    const d = document.createElement('span');
+    d.textContent = ch;
+    d.style.setProperty('--i', i);
+    el.append(d);
+  });
+  return el;
+}
+
+/**
+ * Показати перші chars «символів» абзацу. Решта теж є в DOM, але невидима —
+ * тож розмір панелі не змінюється під час друку (без «стрибків» рядків).
+ */
+function renderParagraph(p, text, chars = Infinity) {
+  p.replaceChildren();
+  p.classList.toggle('greeting__block', Boolean(blockToken(text)));
+  const pending = document.createElement('span');
+  pending.className = 'greeting__pending';
+  let left = chars;
   for (const part of paragraphParts(text)) {
-    if (part === '{smile}') {
-      (left > 0 ? p : pending).append(smile());
+    if (TOKENS.includes(part)) {
+      (left > 0 ? p : pending).append(tokenElement(part));
       left -= 1;
       continue;
     }
@@ -358,8 +395,8 @@ function renderParagraph(p, text, chars = Infinity) {
   if (pending.childNodes.length) p.append(pending);
 }
 
-/** Довжина абзацу для друку (смайл = 1 «символ»). */
-const typedLength = (text) => paragraphParts(text).reduce((n, part) => n + (part === '{smile}' ? 1 : part.length), 0);
+/** Довжина абзацу для друку (мітка = 1 «символ»). */
+const typedLength = (text) => paragraphParts(text).reduce((n, part) => n + (TOKENS.includes(part) ? 1 : part.length), 0);
 
 /**
  * Поділити привітання на сторінки так, щоб кожна вміщалася в кімнату
@@ -389,25 +426,55 @@ function paginate(greeting, body, maxHeight) {
   return pages;
 }
 
+/* ---------- Анімації листа (запускаються, коли друк доходить до місця) ---------- */
+
+const GOLD = ['#FFBF32', '#FFE07A', '#FFF4C2', '#E8A317'];
+const PINK = ['#FF79F4', '#FFB5FF', '#FF4FA3'];
+
+/** Блок-мітка щойно з'явилась: графік росте; на «100%» — мерехтіння і золоте конфеті. */
+function revealBlock(p, token, { app, particles }) {
+  const el = p.firstElementChild;
+  if (!el) return;
+  el.classList.add('is-live');
+  if (token === '{discount}' && particles) {
+    const r = relRect(el, app);
+    particles.confetti(GOLD, 46);
+    particles.burst(r.cx, r.cy, GOLD, 18, 150);
+  }
+}
+
+/** Підпис з'явився: золоті зірочки і маленькі рожеві сердечка навколо нього. */
+function celebrateSignature(signature, { app, particles }) {
+  signature.classList.add('is-on');
+  if (!particles) return;
+  const r = relRect(signature, app);
+  particles.burst(r.cx, r.cy, GOLD, 20, 140);
+  particles.hearts(r.cx, r.t, PINK, 8, { spread: r.w * 0.8 });
+}
+
 /**
  * Показати привітання: поява панелі → заголовок → абзаци «друкуються»
  * (дотик до панелі — показати все одразу) → NEXT між сторінками →
  * підпис і кнопка OK. Слухачі живуть у scope стану і знімаються самі.
- * @param {() => void} onClose  натиснуто OK
+ * @param {{ onClose: () => void, app?: HTMLElement, particles?: object }} opts
  */
-export async function playGreeting(scope, { onClose }) {
+export async function playGreeting(scope, { onClose, app, particles }) {
   const stage = $('#room-stage');
   const greeting = $('#greeting');
   const panel = $('#greeting-panel');
+  const kicker = $('.greeting__kicker');
   const title = $('#greeting-title');
   const body = $('#greeting-body');
   const signature = $('#greeting-signature');
   const nextBtn = $('#greeting-next');
   const closeBtn = $('#greeting-close');
   const reduced = prefersReducedMotion();
+  const fx = { app, particles };
 
+  $('#greeting-kicker').textContent = secretConfig.kicker;
   title.textContent = secretConfig.title;
-  signature.textContent = secretConfig.signature;
+  $('#greeting-queen').textContent = secretConfig.signature;
+  $('#greeting-achievement').textContent = secretConfig.achievement;
   signature.classList.remove('is-on');
   nextBtn.hidden = true;
   closeBtn.hidden = true;
@@ -446,31 +513,44 @@ export async function playGreeting(scope, { onClose }) {
     pageIndex = i;
     nextBtn.hidden = true;
     const texts = pages[i];
-    title.style.display = i === 0 ? '' : 'none';
+    kicker.style.display = title.style.display = i === 0 ? '' : 'none';
     const ps = texts.map(() => document.createElement('p'));
     body.replaceChildren(...ps);
     const isLast = i === pages.length - 1;
     signature.style.display = isLast ? '' : 'none';
     signature.classList.remove('is-on');
 
+    const lengths = texts.map(typedLength);
+    // Скільки вже показано в кожному абзаці: перемальовуємо лише ті, що змінились,
+    // інакше анімації всередині (графік, «100%») перезапускалися б щокадру.
+    const shownNow = texts.map(() => -1);
+    const show = (k, n) => {
+      if (shownNow[k] === n) return;
+      const wasHidden = shownNow[k] < lengths[k];
+      shownNow[k] = n;
+      renderParagraph(ps[k], texts[k], n);
+      const token = blockToken(texts[k]);
+      if (token && wasHidden && n >= lengths[k]) revealBlock(ps[k], token, fx);
+    };
+
     let done = false;
     const finish = () => {
       if (done) return;
       done = true;
       skip = null;
-      texts.forEach((t, k) => renderParagraph(ps[k], t));
+      texts.forEach((t, k) => show(k, lengths[k]));
       if (isLast) {
-        signature.classList.add('is-on');
+        celebrateSignature(signature, fx);
         closeBtn.hidden = false;
       } else {
         nextBtn.hidden = false;
       }
     };
     skip = finish;
+    texts.forEach((t, k) => show(k, 0));
     if (reduced) return finish();
 
     // Друк символ за символом по абзацах.
-    const lengths = texts.map(typedLength);
     const total = lengths.reduce((a, b) => a + b, 0);
     let start = null;
     const tick = (now) => {
@@ -479,7 +559,7 @@ export async function playGreeting(scope, { onClose }) {
       let n = Math.floor(((now - start) / 1000) * CHARS_PER_SECOND);
       if (n >= total) return finish();
       texts.forEach((t, k) => {
-        renderParagraph(ps[k], t, Math.max(0, Math.min(lengths[k], n)));
+        show(k, Math.max(0, Math.min(lengths[k], n)));
         n -= lengths[k];
       });
       scope.frame(tick);
@@ -505,7 +585,7 @@ export function setRoomPhoto(src) {
   img.src = src;
 }
 
-/** Тепле золоте підсвічування фото (після відкриття подарунка — Етап 6). */
+/** Скляне покриття з блиском на фото (після відкриття подарунка). */
 export function setPhotoGlow(on) {
   $('#room-photo').classList.toggle('is-glowing', on);
   $('#room-stage').classList.toggle('is-photo-glow', on);

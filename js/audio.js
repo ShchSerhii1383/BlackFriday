@@ -124,6 +124,11 @@ export const AudioManager = {
     if (ctx) return true;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
+    // iOS 16.4+: «це програвання, як у плеєра» — звук грає навіть у беззвучному режимі
+    // (інакше перемикач на боці iPhone глушить Web Audio). На інших системах властивості немає.
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    } catch { /* старі версії — без змін */ }
     ctx = new AC();
     sfxGain = ctx.createGain();
     sfxGain.gain.value = cfg.effectsVolume;
